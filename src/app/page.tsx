@@ -105,6 +105,15 @@ export default function Home() {
   const mapViewRef = useRef<MapViewRef | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
+  const [availableBrands, setAvailableBrands] = useState<string[]>([]);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+
+  const toggleBrand = (brand: string) => {
+    setSelectedBrands((prev) =>
+      prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand],
+    );
+  };
+
   const handleFuelToggle = (id: number) => {
     setSelectedFuelIds((prev) =>
       prev.includes(id) ? prev.filter((fuel) => fuel !== id) : [...prev, id],
@@ -118,6 +127,10 @@ export default function Home() {
       selectedFuelIds.length > 0,
     [fromQuery, toQuery, selectedFuelIds],
   );
+
+  const filteredStations = useMemo(() => {
+    return stations.filter((s) => selectedBrands.includes(s.brand || "Autres"));
+  }, [stations, selectedBrands]);
 
   const handleSwap = () => {
     setFromQuery(toQuery);
@@ -259,6 +272,12 @@ export default function Home() {
       }
 
       setStations(ranked);
+      
+      const uniqueBrands = Array.from(
+        new Set(ranked.map((s) => s.brand || "Autres"))
+      ).sort();
+      setAvailableBrands(uniqueBrands);
+      setSelectedBrands(uniqueBrands);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue.");
       setStations([]);
@@ -286,26 +305,7 @@ export default function Home() {
         <div className="grid gap-6 lg:grid-cols-[360px_1fr] lg:gap-8">
           <section className="glass-panel lg:sticky lg:top-6 lg:h-fit rounded-2xl p-4 sm:rounded-3xl sm:p-6">
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-              <div className="space-y-2.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[11px] text-slate-500 sm:space-y-3 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-xs">
-                <div className="flex items-start gap-2.5 sm:items-center sm:gap-3">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-semibold text-white sm:h-6 sm:w-6 sm:text-xs">
-                    1
-                  </span>
-                  <p className="leading-relaxed">Renseigne départ, arrivée et carburants.</p>
-                </div>
-                <div className="flex items-start gap-2.5 sm:items-center sm:gap-3">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-semibold text-white sm:h-6 sm:w-6 sm:text-xs">
-                    2
-                  </span>
-                  <p className="leading-relaxed">Choisis l&apos;option de trajet.</p>
-                </div>
-                <div className="flex items-start gap-2.5 sm:items-center sm:gap-3">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-semibold text-white sm:h-6 sm:w-6 sm:text-xs">
-                    3
-                  </span>
-                  <p className="leading-relaxed">Lance la recherche des stations.</p>
-                </div>
-              </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
                   Départ
@@ -517,18 +517,60 @@ export default function Home() {
                 )}
               </div>
             </div>
+
+
           </section>
 
           <section className="space-y-4 sm:space-y-6">
             <MapView
               route={route}
-              stations={stations}
+              stations={filteredStations}
               start={startPoint}
               end={endPoint}
               onMapReady={(ref) => {
                 mapViewRef.current = ref;
               }}
             />
+            {hasSearched && availableBrands.length > 0 && (
+              <div className="space-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-500">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Marques
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedBrands(
+                        selectedBrands.length === availableBrands.length
+                          ? []
+                          : availableBrands,
+                      )
+                    }
+                    className="text-[10px] text-slate-400 underline hover:text-slate-600"
+                  >
+                    {selectedBrands.length === availableBrands.length
+                      ? "Tout décocher"
+                      : "Tout cocher"}
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {availableBrands.map((brand) => (
+                    <button
+                      key={brand}
+                      type="button"
+                      onClick={() => toggleBrand(brand)}
+                      className={`rounded-lg border px-2 py-1 transition ${
+                        selectedBrands.includes(brand)
+                          ? "border-slate-900 bg-slate-900 text-white"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                      }`}
+                    >
+                      {brand}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
               <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="text-sm font-semibold text-slate-900">
@@ -536,8 +578,8 @@ export default function Home() {
                 </h2>
                 <div className="flex items-center gap-2 text-xs text-slate-400">
                   <span>
-                    {stations.length} résultat
-                    {stations.length > 1 ? "s" : ""}
+                    {filteredStations.length} résultat
+                    {filteredStations.length > 1 ? "s" : ""}
                   </span>
                   <span className="hidden sm:inline">·</span>
                   <span className="hidden sm:inline">Top 10 surlignés</span>
@@ -554,7 +596,7 @@ export default function Home() {
                 </div>
               ) : hasSearched ? (
                 <StationList
-                  stations={stations}
+                  stations={filteredStations}
                   onCenterMap={(lat, lon) => {
                     mapViewRef.current?.centerOnStation(lat, lon);
                   }}

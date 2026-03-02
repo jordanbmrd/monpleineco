@@ -88,6 +88,8 @@ const formatDistance = (meters: number) =>
 export default function Home() {
   const [fromQuery, setFromQuery] = useState("");
   const [toQuery, setToQuery] = useState("");
+  const [searchMode, setSearchMode] = useState<"route" | "around">("route");
+  const [addressQuery, setAddressQuery] = useState("");
   const [selectedFuelIds, setSelectedFuelIds] = useState<number[]>([6]);
   const [route, setRoute] = useState<RouteData | null>(null);
   const [stations, setStations] = useState<StationWithMetrics[]>([]);
@@ -97,10 +99,13 @@ export default function Home() {
   const [endPoint, setEndPoint] = useState<LatLng | null>(null);
   const [fromSuggestions, setFromSuggestions] = useState<Suggestion[]>([]);
   const [toSuggestions, setToSuggestions] = useState<Suggestion[]>([]);
+  const [addressSuggestions, setAddressSuggestions] = useState<Suggestion[]>([]);
   const [showFromSuggestions, setShowFromSuggestions] = useState(false);
   const [showToSuggestions, setShowToSuggestions] = useState(false);
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
   const [loadingFromSuggestions, setLoadingFromSuggestions] = useState(false);
   const [loadingToSuggestions, setLoadingToSuggestions] = useState(false);
+  const [loadingAddressSuggestions, setLoadingAddressSuggestions] = useState(false);
   const [avoidTolls, setAvoidTolls] = useState(true);
   const mapViewRef = useRef<MapViewRef | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
@@ -121,11 +126,16 @@ export default function Home() {
   };
 
   const isReadyToSearch = useMemo(
-    () =>
-      Boolean(fromQuery.trim()) &&
-      Boolean(toQuery.trim()) &&
-      selectedFuelIds.length > 0,
-    [fromQuery, toQuery, selectedFuelIds],
+    () => {
+      if (searchMode === "route") {
+        return Boolean(fromQuery.trim()) &&
+          Boolean(toQuery.trim()) &&
+          selectedFuelIds.length > 0;
+      } else {
+        return Boolean(addressQuery.trim()) && selectedFuelIds.length > 0;
+      }
+    },
+    [searchMode, fromQuery, toQuery, addressQuery, selectedFuelIds],
   );
 
   const filteredStations = useMemo(() => {
@@ -181,6 +191,28 @@ export default function Home() {
     return () => window.clearTimeout(handler);
   }, [toQuery]);
 
+  useEffect(() => {
+    const handler = window.setTimeout(async () => {
+      if (addressQuery.trim().length < 3) {
+        setAddressSuggestions([]);
+        return;
+      }
+      try {
+        setLoadingAddressSuggestions(true);
+        const data = await postJson<{ suggestions: Suggestion[] }>(
+          "/api/autocomplete",
+          { query: addressQuery },
+        );
+        setAddressSuggestions(data.suggestions);
+      } catch {
+        setAddressSuggestions([]);
+      } finally {
+        setLoadingAddressSuggestions(false);
+      }
+    }, 250);
+    return () => window.clearTimeout(handler);
+  }, [addressQuery]);
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -188,96 +220,163 @@ export default function Home() {
     setLoading(true);
 
     try {
-      if (!fromQuery.trim() || !toQuery.trim()) {
-        throw new Error("Merci de renseigner un départ et une arrivée.");
-      }
       if (selectedFuelIds.length === 0) {
         throw new Error("Sélectionne au moins un carburant.");
       }
 
-      const [from, to] = await Promise.all([
-        postJson<{ point: LatLng }>("/api/geocode", { query: fromQuery }),
-        postJson<{ point: LatLng }>("/api/geocode", { query: toQuery }),
-      ]);
+      if (searchMode === "route") {
+        if (!fromQuery.trim() || !toQuery.trim()) {
+          throw new Error("Merci de renseigner un départ et une arrivée.");
+        }
 
-      setStartPoint(from.point);
-      setEndPoint(to.point);
+        const [from, to] = await Promise.all([
+          postJson<{ point: LatLng }>("/api/geocode", { query: fromQuery }),
+          postJson<{ point: LatLng }>("/api/geocode", { query: toQuery }),
+        ]);
 
-      const routeData = await postJson<RouteData>("/api/route", {
-        start: from.point,
-        end: to.point,
-        avoidTolls,
-      });
-      setRoute(routeData);
+        setStartPoint(from.point);
+        setEndPoint(to.point);
 
-      const targetCalls = Math.min(40, Math.max(12, Math.ceil(routeData.distance / 15000)));
-      const spacingMeters = Math.max(6000, routeData.distance / targetCalls);
-      const sampledPoints = sampleRoutePoints(
-        routeData.coordinates.map(([lon, lat]) => ({ lat, lon })),
-        spacingMeters,
-      );
+        const routeData = await postJson<RouteData>("/api/route", {
+          start: from.point,
+          end: to.point,
+          avoidTolls,
+        });
+        setRoute(routeData);
 
-      const stationData = await postJson<{ stations: Station[] }>(
-        "/api/stations",
-        {
-          points: sampledPoints,
-          fuelIds: selectedFuelIds,
-          rangeMeters: 9999,
-        },
-      );
+        const targetCalls = Math.min(40, Math.max(12, Math.ceil(routeData.distance / 15000)));
+        const spacingMeters = Math.max(6000, routeData.distance / targetCalls);
+        const sampledPoints = sampleRoutePoints(
+          routeData.coordinates.map(([lon, lat]) => ({ lat, lon })),
+          spacingMeters,
+        );
 
-      const routeLineNow = routeData.coordinates.map(([lon, lat]) => ({
-        lat,
-        lon,
-      }));
-      const enriched = stationData.stations
-        .map((station) => {
-          const candidates = station.fuels.filter(
-            (fuel): fuel is (typeof station.fuels)[number] & { price: number } =>
-              selectedFuelIds.includes(fuel.id) &&
-              fuel.available &&
-              typeof fuel.price === "number",
-          );
-          if (!candidates.length) {
-            return null;
-          }
-          const best = candidates.reduce((acc, fuel) =>
-            fuel.price < acc.price ? fuel : acc,
-          );
-          const distanceToRoute =
-            routeLineNow.length > 1
-              ? distancePointToPolylineMeters(
-                station.coordinates,
-                routeLineNow,
-              )
-              : Number.POSITIVE_INFINITY;
-          return {
-            ...station,
-            bestPrice: best.price ?? 0,
-            bestFuelLabel: best.shortName,
-            distanceToRoute,
-          };
-        })
-        .filter((station): station is StationWithMetrics => Boolean(station))
-        .filter((station) => station.distanceToRoute <= 5000)
-        .sort((a, b) => a.bestPrice - b.bestPrice);
+        const stationData = await postJson<{ stations: Station[] }>(
+          "/api/stations",
+          {
+            points: sampledPoints,
+            fuelIds: selectedFuelIds,
+            rangeMeters: 9999,
+          },
+        );
 
-      const ranked = enriched.map((station, index) => ({
-        ...station,
-        rank: index + 1,
-      }));
+        const routeLineNow = routeData.coordinates.map(([lon, lat]) => ({
+          lat,
+          lon,
+        }));
+        const enriched = stationData.stations
+          .map((station) => {
+            const candidates = station.fuels.filter(
+              (fuel): fuel is (typeof station.fuels)[number] & { price: number } =>
+                selectedFuelIds.includes(fuel.id) &&
+                fuel.available &&
+                typeof fuel.price === "number",
+            );
+            if (!candidates.length) {
+              return null;
+            }
+            const best = candidates.reduce((acc, fuel) =>
+              fuel.price < acc.price ? fuel : acc,
+            );
+            const distanceToRoute =
+              routeLineNow.length > 1
+                ? distancePointToPolylineMeters(
+                  station.coordinates,
+                  routeLineNow,
+                )
+                : Number.POSITIVE_INFINITY;
+            return {
+              ...station,
+              bestPrice: best.price ?? 0,
+              bestFuelLabel: best.shortName,
+              distanceToRoute,
+            };
+          })
+          .filter((station): station is StationWithMetrics => Boolean(station))
+          .filter((station) => station.distanceToRoute <= 5000)
+          .sort((a, b) => a.bestPrice - b.bestPrice);
 
-      if (ranked.length === 0 && stationData.stations.length > 0) {
-        console.warn(`Aucune station trouvée après filtrage. Stations brutes: ${stationData.stations.length}, Points échantillonnés: ${sampledPoints.length}`);
+        const ranked = enriched.map((station, index) => ({
+          ...station,
+          rank: index + 1,
+        }));
+
+        if (ranked.length === 0 && stationData.stations.length > 0) {
+          console.warn(`Aucune station trouvée après filtrage. Stations brutes: ${stationData.stations.length}, Points échantillonnés: ${sampledPoints.length}`);
+        }
+
+        setStations(ranked);
+
+        const uniqueBrands = Array.from(
+          new Set(ranked.map((s) => s.brand || "Autres"))
+        ).sort();
+        setAvailableBrands(uniqueBrands);
+        setSelectedBrands(uniqueBrands);
+      } else {
+        // Mode "Autour de"
+        if (!addressQuery.trim()) {
+          throw new Error("Merci de renseigner une adresse.");
+        }
+
+        const { point } = await postJson<{ point: LatLng }>("/api/geocode", { query: addressQuery });
+        setStartPoint(point);
+        setEndPoint(null);
+        setRoute(null);
+
+        const stationData = await postJson<{ stations: Station[] }>(
+          "/api/stations",
+          {
+            points: [point],
+            fuelIds: selectedFuelIds,
+            rangeMeters: 9999, // Max allowed by API is 10km
+          },
+        );
+
+        const enriched = stationData.stations
+          .map((station) => {
+            const candidates = station.fuels.filter(
+              (fuel): fuel is (typeof station.fuels)[number] & { price: number } =>
+                selectedFuelIds.includes(fuel.id) &&
+                fuel.available &&
+                typeof fuel.price === "number",
+            );
+            if (!candidates.length) {
+              return null;
+            }
+            const best = candidates.reduce((acc, fuel) =>
+              fuel.price < acc.price ? fuel : acc,
+            );
+            
+            // Distance à vol d'oiseau depuis le point central
+            // (approximation simple ou calcul précis si nécessaire, mais ici on n'a pas de route)
+            // On peut utiliser distancePointToPolylineMeters avec un point unique si on veut, 
+            // ou juste laisser distanceToRoute à 0 car ce n'est pas pertinent.
+            // Mais pour le tri/affichage, on pourrait vouloir la distance au point.
+            // Pour l'instant, on met 0.
+            
+            return {
+              ...station,
+              bestPrice: best.price ?? 0,
+              bestFuelLabel: best.shortName,
+              distanceToRoute: 0, 
+            };
+          })
+          .filter((station): station is StationWithMetrics => Boolean(station))
+          .sort((a, b) => a.bestPrice - b.bestPrice);
+
+        const ranked = enriched.map((station, index) => ({
+          ...station,
+          rank: index + 1,
+        }));
+
+        setStations(ranked);
+
+        const uniqueBrands = Array.from(
+          new Set(ranked.map((s) => s.brand || "Autres"))
+        ).sort();
+        setAvailableBrands(uniqueBrands);
+        setSelectedBrands(uniqueBrands);
       }
-
-      setStations(ranked);
-      
-      const uniqueBrands = Array.from(
-        new Set(ranked.map((s) => s.brand || "Autres"))
-      ).sort();
-      setAvailableBrands(uniqueBrands);
-      setSelectedBrands(uniqueBrands);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue.");
       setStations([]);
@@ -305,128 +404,206 @@ export default function Home() {
         <div className="grid gap-6 lg:grid-cols-[360px_1fr] lg:gap-8">
           <section className="glass-panel lg:sticky lg:top-6 lg:h-fit rounded-2xl p-4 sm:rounded-3xl sm:p-6">
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+              
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="searchMode"
+                    value="route"
+                    checked={searchMode === "route"}
+                    onChange={() => setSearchMode("route")}
+                    className="h-4 w-4 border-slate-300 text-slate-900 focus:ring-slate-900"
+                  />
+                  Trajet
+                </label>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="searchMode"
+                    value="around"
+                    checked={searchMode === "around"}
+                    onChange={() => setSearchMode("around")}
+                    className="h-4 w-4 border-slate-300 text-slate-900 focus:ring-slate-900"
+                  />
+                  Autour de
+                </label>
+              </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  Départ
-                </label>
-                <div className="relative">
-                  <input
-                    value={fromQuery}
-                    onChange={(event) => setFromQuery(event.target.value)}
-                    onFocus={() => setShowFromSuggestions(true)}
-                    onBlur={() =>
-                      window.setTimeout(() => setShowFromSuggestions(false), 150)
-                    }
-                    placeholder="Ex: 11 rue Jules Gautier, 92000 Nanterre"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none sm:text-sm"
-                  />
-                  {showFromSuggestions && fromQuery.trim().length >= 3 && (
-                    <div className="autocomplete-panel">
-                      <div className="autocomplete-header">Suggestions</div>
-                      {loadingFromSuggestions ? (
-                        <div className="autocomplete-empty">
-                          Recherche en cours...
-                        </div>
-                      ) : fromSuggestions.length > 0 ? (
-                        <div className="autocomplete-list">
-                          {fromSuggestions.map((suggestion) => (
-                            <div
-                              key={suggestion.id}
-                              className="autocomplete-item"
-                              onMouseDown={() => {
-                                setFromQuery(suggestion.label);
-                                setFromSuggestions([]);
-                                setShowFromSuggestions(false);
-                              }}
-                            >
-                              {suggestion.label}
+              {searchMode === "route" ? (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Départ
+                    </label>
+                    <div className="relative">
+                      <input
+                        value={fromQuery}
+                        onChange={(event) => setFromQuery(event.target.value)}
+                        onFocus={() => setShowFromSuggestions(true)}
+                        onBlur={() =>
+                          window.setTimeout(() => setShowFromSuggestions(false), 150)
+                        }
+                        placeholder="Ex: 11 rue Jules Gautier, 92000 Nanterre"
+                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none sm:text-sm"
+                      />
+                      {showFromSuggestions && fromQuery.trim().length >= 3 && (
+                        <div className="autocomplete-panel">
+                          <div className="autocomplete-header">Suggestions</div>
+                          {loadingFromSuggestions ? (
+                            <div className="autocomplete-empty">
+                              Recherche en cours...
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="autocomplete-empty">
-                          Aucun résultat trouvé.
+                          ) : fromSuggestions.length > 0 ? (
+                            <div className="autocomplete-list">
+                              {fromSuggestions.map((suggestion) => (
+                                <div
+                                  key={suggestion.id}
+                                  className="autocomplete-item"
+                                  onMouseDown={() => {
+                                    setFromQuery(suggestion.label);
+                                    setFromSuggestions([]);
+                                    setShowFromSuggestions(false);
+                                  }}
+                                >
+                                  {suggestion.label}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="autocomplete-empty">
+                              Aucun résultat trouvé.
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleSwap}
-                className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:border-slate-400 hover:text-slate-700 active:bg-slate-50 touch-manipulation"
-              >
-                Inverser départ / arrivée
-              </button>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  Arrivée
-                </label>
-                <div className="relative">
-                  <input
-                    value={toQuery}
-                    onChange={(event) => setToQuery(event.target.value)}
-                    onFocus={() => setShowToSuggestions(true)}
-                    onBlur={() =>
-                      window.setTimeout(() => setShowToSuggestions(false), 150)
-                    }
-                    placeholder="Ex: Montpellier"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none sm:text-sm"
-                  />
-                  {showToSuggestions && toQuery.trim().length >= 3 && (
-                    <div className="autocomplete-panel">
-                      <div className="autocomplete-header">Suggestions</div>
-                      {loadingToSuggestions ? (
-                        <div className="autocomplete-empty">
-                          Recherche en cours...
-                        </div>
-                      ) : toSuggestions.length > 0 ? (
-                        <div className="autocomplete-list">
-                          {toSuggestions.map((suggestion) => (
-                            <div
-                              key={suggestion.id}
-                              className="autocomplete-item"
-                              onMouseDown={() => {
-                                setToQuery(suggestion.label);
-                                setToSuggestions([]);
-                                setShowToSuggestions(false);
-                              }}
-                            >
-                              {suggestion.label}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSwap}
+                    className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:border-slate-400 hover:text-slate-700 active:bg-slate-50 touch-manipulation"
+                  >
+                    Inverser départ / arrivée
+                  </button>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Arrivée
+                    </label>
+                    <div className="relative">
+                      <input
+                        value={toQuery}
+                        onChange={(event) => setToQuery(event.target.value)}
+                        onFocus={() => setShowToSuggestions(true)}
+                        onBlur={() =>
+                          window.setTimeout(() => setShowToSuggestions(false), 150)
+                        }
+                        placeholder="Ex: Montpellier"
+                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none sm:text-sm"
+                      />
+                      {showToSuggestions && toQuery.trim().length >= 3 && (
+                        <div className="autocomplete-panel">
+                          <div className="autocomplete-header">Suggestions</div>
+                          {loadingToSuggestions ? (
+                            <div className="autocomplete-empty">
+                              Recherche en cours...
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="autocomplete-empty">
-                          Aucun résultat trouvé.
+                          ) : toSuggestions.length > 0 ? (
+                            <div className="autocomplete-list">
+                              {toSuggestions.map((suggestion) => (
+                                <div
+                                  key={suggestion.id}
+                                  className="autocomplete-item"
+                                  onMouseDown={() => {
+                                    setToQuery(suggestion.label);
+                                    setToSuggestions([]);
+                                    setShowToSuggestions(false);
+                                  }}
+                                >
+                                  {suggestion.label}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="autocomplete-empty">
+                              Aucun résultat trouvé.
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  )}
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                      Itinéraires rapides
+                    </p>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {routePresets.map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => {
+                            setFromQuery(preset.from);
+                            setToQuery(preset.to);
+                          }}
+                          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-600 transition hover:border-slate-400 hover:text-slate-800 active:bg-slate-50"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    Adresse
+                  </label>
+                  <div className="relative">
+                    <input
+                      value={addressQuery}
+                      onChange={(event) => setAddressQuery(event.target.value)}
+                      onFocus={() => setShowAddressSuggestions(true)}
+                      onBlur={() =>
+                        window.setTimeout(() => setShowAddressSuggestions(false), 150)
+                      }
+                      placeholder="Ex: 11 rue Jules Gautier, 92000 Nanterre"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none sm:text-sm"
+                    />
+                    {showAddressSuggestions && addressQuery.trim().length >= 3 && (
+                      <div className="autocomplete-panel">
+                        <div className="autocomplete-header">Suggestions</div>
+                        {loadingAddressSuggestions ? (
+                          <div className="autocomplete-empty">
+                            Recherche en cours...
+                          </div>
+                        ) : addressSuggestions.length > 0 ? (
+                          <div className="autocomplete-list">
+                            {addressSuggestions.map((suggestion) => (
+                              <div
+                                key={suggestion.id}
+                                className="autocomplete-item"
+                                onMouseDown={() => {
+                                  setAddressQuery(suggestion.label);
+                                  setAddressSuggestions([]);
+                                  setShowAddressSuggestions(false);
+                                }}
+                              >
+                                {suggestion.label}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="autocomplete-empty">
+                            Aucun résultat trouvé.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                  Itinéraires rapides
-                </p>
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {routePresets.map((preset) => (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      onClick={() => {
-                        setFromQuery(preset.from);
-                        setToQuery(preset.to);
-                      }}
-                      className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-600 transition hover:border-slate-400 hover:text-slate-800 active:bg-slate-50"
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              )}
+
               <div className="space-y-2">
                 <p className="text-sm font-medium text-slate-700">
                   Carburants
@@ -451,39 +628,41 @@ export default function Home() {
                   ))}
                 </div>
               </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-slate-700">Trajet</p>
-                <div className="flex flex-col gap-2 text-sm">
-                  <label
-                    className={`flex items-center gap-2 rounded-xl border px-3 py-2 transition ${avoidTolls
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-white text-slate-600"
-                      }`}
-                  >
-                    <input
-                      type="radio"
-                      checked={avoidTolls}
-                      onChange={() => setAvoidTolls(true)}
-                      className="hidden"
-                    />
-                    Sans péages
-                  </label>
-                  <label
-                    className={`flex items-center gap-2 rounded-xl border px-3 py-2 transition ${!avoidTolls
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-white text-slate-600"
-                      }`}
-                  >
-                    <input
-                      type="radio"
-                      checked={!avoidTolls}
-                      onChange={() => setAvoidTolls(false)}
-                      className="hidden"
-                    />
-                    Avec péages
-                  </label>
+              {searchMode === "route" && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-slate-700">Trajet</p>
+                  <div className="flex flex-col gap-2 text-sm">
+                    <label
+                      className={`flex items-center gap-2 rounded-xl border px-3 py-2 transition ${avoidTolls
+                        ? "border-slate-900 bg-slate-900 text-white"
+                        : "border-slate-200 bg-white text-slate-600"
+                        }`}
+                    >
+                      <input
+                        type="radio"
+                        checked={avoidTolls}
+                        onChange={() => setAvoidTolls(true)}
+                        className="hidden"
+                      />
+                      Sans péages
+                    </label>
+                    <label
+                      className={`flex items-center gap-2 rounded-xl border px-3 py-2 transition ${!avoidTolls
+                        ? "border-slate-900 bg-slate-900 text-white"
+                        : "border-slate-200 bg-white text-slate-600"
+                        }`}
+                    >
+                      <input
+                        type="radio"
+                        checked={!avoidTolls}
+                        onChange={() => setAvoidTolls(false)}
+                        className="hidden"
+                      />
+                      Avec péages
+                    </label>
+                  </div>
                 </div>
-              </div>
+              )}
               {error && (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   {error}
@@ -503,9 +682,11 @@ export default function Home() {
                 Résumé
               </p>
               <div className="grid gap-2">
-                <p>
-                  Option trajet: {avoidTolls ? "Sans péages" : "Avec péages"}
-                </p>
+                {searchMode === "route" && (
+                  <p>
+                    Option trajet: {avoidTolls ? "Sans péages" : "Avec péages"}
+                  </p>
+                )}
                 <p>Carburants sélectionnés: {selectedFuelIds.length}</p>
                 {route ? (
                   <>
@@ -513,7 +694,11 @@ export default function Home() {
                     <p>Durée estimée: {formatDuration(route.duration)}</p>
                   </>
                 ) : (
-                  <p>Distance et durée calculées après recherche.</p>
+                  searchMode === "route" ? (
+                    <p>Distance et durée calculées après recherche.</p>
+                  ) : (
+                    <p>Recherche autour de l&apos;adresse indiquée.</p>
+                  )
                 )}
               </div>
             </div>
@@ -574,7 +759,7 @@ export default function Home() {
             <div>
               <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="text-sm font-semibold text-slate-900">
-                  Stations sur l&apos;itinéraire
+                  {searchMode === "route" ? "Stations sur l'itinéraire" : "Stations aux alentours"}
                 </h2>
                 <div className="flex items-center gap-2 text-xs text-slate-400">
                   <span>
@@ -603,7 +788,9 @@ export default function Home() {
                 />
               ) : (
                 <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-10 text-sm text-slate-500">
-                  Lance une recherche pour afficher les stations sur ton trajet.
+                  {searchMode === "route"
+                    ? "Lance une recherche pour afficher les stations sur ton trajet."
+                    : "Lance une recherche pour afficher les stations aux alentours."}
                 </div>
               )}
             </div>

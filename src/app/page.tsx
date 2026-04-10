@@ -602,7 +602,7 @@ export default function Home() {
 
               <div>
                 <p className="section-label">Carburants</p>
-                <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5 lg:mx-0 lg:px-0 lg:flex-wrap scrollbar-hide">
+                <div className="flex gap-2 flex-wrap">
                   {fuelOptions.map((fuel) => (
                     <button
                       key={fuel.id}
@@ -678,7 +678,7 @@ export default function Home() {
                       : "Tout cocher"}
                   </button>
                 </div>
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                <div className="flex gap-2 flex-wrap">
                   {availableBrands.map((brand) => (
                     <button
                       key={brand}

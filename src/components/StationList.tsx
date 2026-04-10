@@ -67,7 +67,7 @@ const StationList = ({ stations, onCenterMap }: StationListProps) => {
                                     {station.brand ?? "Indépendant"}
                                 </span>
                             </div>
-                            <p className="text-sm font-semibold text-slate-900 leading-snug">
+                            <p className="text-sm font-semibold text-slate-900 leading-snug truncate">
                                 {station.name}
                             </p>
                             <p className="text-xs text-slate-500 mt-0.5 truncate">

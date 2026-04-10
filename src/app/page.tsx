@@ -39,12 +39,12 @@ type Suggestion = {
 };
 
 const fuelOptions = [
+  { id: 5, label: "SP95-E10" },
+  { id: 6, label: "SP98" },
   { id: 1, label: "Gazole" },
   { id: 2, label: "SP95" },
   { id: 3, label: "E85" },
   { id: 4, label: "GPLc" },
-  { id: 5, label: "SP95-E10" },
-  { id: 6, label: "SP98" },
 ];
 
 const routePresets = [
@@ -88,9 +88,9 @@ const formatDistance = (meters: number) =>
 export default function Home() {
   const [fromQuery, setFromQuery] = useState("");
   const [toQuery, setToQuery] = useState("");
-  const [searchMode, setSearchMode] = useState<"route" | "around">("route");
+  const [searchMode, setSearchMode] = useState<"route" | "around">("around");
   const [addressQuery, setAddressQuery] = useState("");
-  const [selectedFuelIds, setSelectedFuelIds] = useState<number[]>([6]);
+  const [selectedFuelId, setSelectedFuelId] = useState<number>(5);
   const [route, setRoute] = useState<RouteData | null>(null);
   const [stations, setStations] = useState<StationWithMetrics[]>([]);
   const [loading, setLoading] = useState(false);
@@ -119,10 +119,8 @@ export default function Home() {
     );
   };
 
-  const handleFuelToggle = (id: number) => {
-    setSelectedFuelIds((prev) =>
-      prev.includes(id) ? prev.filter((fuel) => fuel !== id) : [...prev, id],
-    );
+  const handleFuelSelect = (id: number) => {
+    setSelectedFuelId(id);
   };
 
   const isReadyToSearch = useMemo(
@@ -130,12 +128,12 @@ export default function Home() {
       if (searchMode === "route") {
         return Boolean(fromQuery.trim()) &&
           Boolean(toQuery.trim()) &&
-          selectedFuelIds.length > 0;
+          selectedFuelId > 0;
       } else {
-        return Boolean(addressQuery.trim()) && selectedFuelIds.length > 0;
+        return Boolean(addressQuery.trim()) && selectedFuelId > 0;
       }
     },
-    [searchMode, fromQuery, toQuery, addressQuery, selectedFuelIds],
+    [searchMode, fromQuery, toQuery, addressQuery, selectedFuelId],
   );
 
   const filteredStations = useMemo(() => {
@@ -147,6 +145,32 @@ export default function Home() {
     setToQuery(fromQuery);
   };
 
+  const fetchSuggestions = async (query: string): Promise<Suggestion[]> => {
+    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&lang=fr&lat=46.6&lon=2.2`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const data = await res.json() as { features: Array<{ properties: { name?: string; street?: string; housenumber?: string; city?: string; postcode?: string; country?: string; osm_value?: string } }> };
+    return data.features.map((f, i) => {
+      const p = f.properties;
+      const parts: string[] = [];
+      if (p.name) parts.push(p.name);
+      if (p.housenumber && p.street) parts.push(`${p.housenumber} ${p.street}`);
+      else if (p.street) parts.push(p.street);
+      if (p.postcode || p.city) parts.push([p.postcode, p.city].filter(Boolean).join(" "));
+      return { id: i, label: parts.join(", ") || "Lieu inconnu" };
+    });
+  };
+
+  const geocodeClient = async (query: string): Promise<LatLng> => {
+    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=1&lang=fr&lat=46.6&lon=2.2`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Erreur lors de la géolocalisation.");
+    const data = await res.json() as { features: Array<{ geometry: { coordinates: [number, number] } }> };
+    if (!data.features.length) throw new Error("Adresse introuvable.");
+    const [lon, lat] = data.features[0].geometry.coordinates;
+    return { lat, lon };
+  };
+
   useEffect(() => {
     const handler = window.setTimeout(async () => {
       if (fromQuery.trim().length < 3) {
@@ -155,11 +179,7 @@ export default function Home() {
       }
       try {
         setLoadingFromSuggestions(true);
-        const data = await postJson<{ suggestions: Suggestion[] }>(
-          "/api/autocomplete",
-          { query: fromQuery },
-        );
-        setFromSuggestions(data.suggestions);
+        setFromSuggestions(await fetchSuggestions(fromQuery));
       } catch {
         setFromSuggestions([]);
       } finally {
@@ -177,11 +197,7 @@ export default function Home() {
       }
       try {
         setLoadingToSuggestions(true);
-        const data = await postJson<{ suggestions: Suggestion[] }>(
-          "/api/autocomplete",
-          { query: toQuery },
-        );
-        setToSuggestions(data.suggestions);
+        setToSuggestions(await fetchSuggestions(toQuery));
       } catch {
         setToSuggestions([]);
       } finally {
@@ -199,11 +215,7 @@ export default function Home() {
       }
       try {
         setLoadingAddressSuggestions(true);
-        const data = await postJson<{ suggestions: Suggestion[] }>(
-          "/api/autocomplete",
-          { query: addressQuery },
-        );
-        setAddressSuggestions(data.suggestions);
+        setAddressSuggestions(await fetchSuggestions(addressQuery));
       } catch {
         setAddressSuggestions([]);
       } finally {
@@ -220,26 +232,24 @@ export default function Home() {
     setLoading(true);
 
     try {
-      if (selectedFuelIds.length === 0) {
-        throw new Error("Sélectionne au moins un carburant.");
-      }
+      const selectedFuelIds = [selectedFuelId];
 
       if (searchMode === "route") {
         if (!fromQuery.trim() || !toQuery.trim()) {
           throw new Error("Merci de renseigner un départ et une arrivée.");
         }
 
-        const [from, to] = await Promise.all([
-          postJson<{ point: LatLng }>("/api/geocode", { query: fromQuery }),
-          postJson<{ point: LatLng }>("/api/geocode", { query: toQuery }),
+        const [fromPoint, toPoint] = await Promise.all([
+          geocodeClient(fromQuery),
+          geocodeClient(toQuery),
         ]);
 
-        setStartPoint(from.point);
-        setEndPoint(to.point);
+        setStartPoint(fromPoint);
+        setEndPoint(toPoint);
 
         const routeData = await postJson<RouteData>("/api/route", {
-          start: from.point,
-          end: to.point,
+          start: fromPoint,
+          end: toPoint,
           avoidTolls,
         });
         setRoute(routeData);
@@ -318,7 +328,7 @@ export default function Home() {
           throw new Error("Merci de renseigner une adresse.");
         }
 
-        const { point } = await postJson<{ point: LatLng }>("/api/geocode", { query: addressQuery });
+        const point = await geocodeClient(addressQuery);
         setStartPoint(point);
         setEndPoint(null);
         setRoute(null);
@@ -387,47 +397,34 @@ export default function Home() {
 
   return (
     <div className="app-shell">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:gap-8 sm:px-6 sm:py-10">
-        <header className="space-y-2 sm:space-y-3">
-          <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400 sm:text-xs">
-            Mon Plein Éco
-          </p>
-          <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl lg:text-3xl">
-            Les stations essence les moins chères sur votre trajet.
+      <header className="app-header">
+        <div className="mx-auto max-w-6xl flex items-center justify-between px-4 py-3 sm:px-6">
+          <h1 className="text-lg font-bold text-slate-900 tracking-tight">
+            <span className="mr-1">⛽</span> Mon Plein Éco
           </h1>
-          <p className="text-xs text-slate-500 sm:text-sm sm:max-w-2xl">
-            Saisissez votre itinéraire, choisissez vos carburants et découvrez
-            les stations les mieux placées en un coup d&apos;œil.
-          </p>
-        </header>
+          <span className="text-xs text-slate-400 hidden sm:inline">Trouvez le carburant le moins cher</span>
+        </div>
+      </header>
 
-        <div className="grid gap-6 lg:grid-cols-[360px_1fr] lg:gap-8">
-          <section className="glass-panel lg:sticky lg:top-6 lg:h-fit rounded-2xl p-4 sm:rounded-3xl sm:p-6">
-            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-              
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="searchMode"
-                    value="route"
-                    checked={searchMode === "route"}
-                    onChange={() => setSearchMode("route")}
-                    className="h-4 w-4 border-slate-300 text-slate-900 focus:ring-slate-900"
-                  />
-                  Trajet
-                </label>
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="searchMode"
-                    value="around"
-                    checked={searchMode === "around"}
-                    onChange={() => setSearchMode("around")}
-                    className="h-4 w-4 border-slate-300 text-slate-900 focus:ring-slate-900"
-                  />
-                  Autour de
-                </label>
+      <main className="mx-auto max-w-6xl px-4 pb-6 sm:px-6 safe-bottom">
+        <div className="grid gap-4 py-4 lg:grid-cols-[380px_1fr] lg:gap-6 lg:py-6">
+          <section className="search-panel">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="segmented-control">
+                <button
+                  type="button"
+                  onClick={() => setSearchMode("around")}
+                  className={`segment ${searchMode === "around" ? "segment--active" : ""}`}
+                >
+                  Autour de moi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSearchMode("route")}
+                  className={`segment ${searchMode === "route" ? "segment--active" : ""}`}
+                >
+                  Sur un trajet
+                </button>
               </div>
 
               {searchMode === "route" ? (
@@ -444,8 +441,8 @@ export default function Home() {
                         onBlur={() =>
                           window.setTimeout(() => setShowFromSuggestions(false), 150)
                         }
-                        placeholder="Ex: 11 rue Jules Gautier, 92000 Nanterre"
-                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none sm:text-sm"
+                        placeholder="Ville ou adresse de départ"
+                        className="search-input"
                       />
                       {showFromSuggestions && fromQuery.trim().length >= 3 && (
                         <div className="autocomplete-panel">
@@ -482,9 +479,10 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={handleSwap}
-                    className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:border-slate-400 hover:text-slate-700 active:bg-slate-50 touch-manipulation"
+                    className="mx-auto flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-500 transition active:scale-95 active:bg-slate-200 touch-manipulation"
+                    aria-label="Inverser départ / arrivée"
                   >
-                    Inverser départ / arrivée
+                    ↕
                   </button>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">
@@ -498,8 +496,8 @@ export default function Home() {
                         onBlur={() =>
                           window.setTimeout(() => setShowToSuggestions(false), 150)
                         }
-                        placeholder="Ex: Montpellier"
-                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none sm:text-sm"
+                        placeholder="Ville ou adresse d'arrivée"
+                        className="search-input"
                       />
                       {showToSuggestions && toQuery.trim().length >= 3 && (
                         <div className="autocomplete-panel">
@@ -533,11 +531,9 @@ export default function Home() {
                       )}
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                      Itinéraires rapides
-                    </p>
-                    <div className="flex flex-wrap gap-2 text-xs">
+                  <div>
+                    <p className="section-label">Itinéraires rapides</p>
+                    <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                       {routePresets.map((preset) => (
                         <button
                           key={preset.label}
@@ -546,7 +542,7 @@ export default function Home() {
                             setFromQuery(preset.from);
                             setToQuery(preset.to);
                           }}
-                          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-600 transition hover:border-slate-400 hover:text-slate-800 active:bg-slate-50"
+                          className="fuel-chip"
                         >
                           {preset.label}
                         </button>
@@ -567,8 +563,8 @@ export default function Home() {
                       onBlur={() =>
                         window.setTimeout(() => setShowAddressSuggestions(false), 150)
                       }
-                      placeholder="Ex: 11 rue Jules Gautier, 92000 Nanterre"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none sm:text-sm"
+                      placeholder="Ville ou adresse"
+                      className="search-input"
                     />
                     {showAddressSuggestions && addressQuery.trim().length >= 3 && (
                       <div className="autocomplete-panel">
@@ -604,106 +600,52 @@ export default function Home() {
                 </div>
               )}
 
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-slate-700">
-                  Carburants
-                </p>
-                <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
+              <div>
+                <p className="section-label">Carburants</p>
+                <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5 lg:mx-0 lg:px-0 lg:flex-wrap scrollbar-hide">
                   {fuelOptions.map((fuel) => (
-                    <label
+                    <button
                       key={fuel.id}
-                      className={`flex items-center gap-2 rounded-xl border px-3 py-2 transition ${selectedFuelIds.includes(fuel.id)
-                        ? "border-slate-900 bg-slate-900 text-white"
-                        : "border-slate-200 bg-white text-slate-600"
-                        }`}
+                      type="button"
+                      onClick={() => handleFuelSelect(fuel.id)}
+                      className={`fuel-chip ${selectedFuelId === fuel.id ? "fuel-chip--selected" : ""}`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={selectedFuelIds.includes(fuel.id)}
-                        onChange={() => handleFuelToggle(fuel.id)}
-                        className="hidden"
-                      />
                       {fuel.label}
-                    </label>
+                    </button>
                   ))}
                 </div>
               </div>
               {searchMode === "route" && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-slate-700">Trajet</p>
-                  <div className="flex flex-col gap-2 text-sm">
-                    <label
-                      className={`flex items-center gap-2 rounded-xl border px-3 py-2 transition ${avoidTolls
-                        ? "border-slate-900 bg-slate-900 text-white"
-                        : "border-slate-200 bg-white text-slate-600"
-                        }`}
-                    >
-                      <input
-                        type="radio"
-                        checked={avoidTolls}
-                        onChange={() => setAvoidTolls(true)}
-                        className="hidden"
-                      />
+                <div>
+                  <p className="section-label">Options</p>
+                  <div className="flex gap-2">
+                    <label className={`toggle-chip ${avoidTolls ? "toggle-chip--selected" : ""}`}>
+                      <input type="radio" checked={avoidTolls} onChange={() => setAvoidTolls(true)} className="hidden" />
                       Sans péages
                     </label>
-                    <label
-                      className={`flex items-center gap-2 rounded-xl border px-3 py-2 transition ${!avoidTolls
-                        ? "border-slate-900 bg-slate-900 text-white"
-                        : "border-slate-200 bg-white text-slate-600"
-                        }`}
-                    >
-                      <input
-                        type="radio"
-                        checked={!avoidTolls}
-                        onChange={() => setAvoidTolls(false)}
-                        className="hidden"
-                      />
+                    <label className={`toggle-chip ${!avoidTolls ? "toggle-chip--selected" : ""}`}>
+                      <input type="radio" checked={!avoidTolls} onChange={() => setAvoidTolls(false)} className="hidden" />
                       Avec péages
                     </label>
                   </div>
                 </div>
               )}
-              {error && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
+              {error && <div className="error-banner">{error}</div>}
               <button
                 type="submit"
                 disabled={loading || !isReadyToSearch}
-                className="w-full rounded-xl bg-slate-900 px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 active:bg-slate-950 disabled:cursor-not-allowed disabled:bg-slate-400 touch-manipulation"
+                className="btn-primary"
               >
-                {loading ? "Recherche en cours..." : "Chercher les stations"}
+                {loading ? "Recherche en cours..." : "Rechercher"}
               </button>
             </form>
 
-            <div className="mt-6 space-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-500">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                Résumé
-              </p>
-              <div className="grid gap-2">
-                {searchMode === "route" && (
-                  <p>
-                    Option trajet: {avoidTolls ? "Sans péages" : "Avec péages"}
-                  </p>
-                )}
-                <p>Carburants sélectionnés: {selectedFuelIds.length}</p>
-                {route ? (
-                  <>
-                    <p>Distance estimée: {formatDistance(route.distance)}</p>
-                    <p>Durée estimée: {formatDuration(route.duration)}</p>
-                  </>
-                ) : (
-                  searchMode === "route" ? (
-                    <p>Distance et durée calculées après recherche.</p>
-                  ) : (
-                    <p>Recherche autour de l&apos;adresse indiquée.</p>
-                  )
-                )}
+            {route && (
+              <div className="mt-4 flex gap-2 flex-wrap">
+                <span className="route-pill">📏 {formatDistance(route.distance)}</span>
+                <span className="route-pill">⏱️ {formatDuration(route.duration)}</span>
               </div>
-            </div>
-
-
+            )}
           </section>
 
           <section className="space-y-4 sm:space-y-6">
@@ -717,11 +659,9 @@ export default function Home() {
               }}
             />
             {hasSearched && availableBrands.length > 0 && (
-              <div className="space-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-500">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                    Marques
-                  </p>
+                  <p className="section-label mb-0">Marques</p>
                   <button
                     type="button"
                     onClick={() =>
@@ -731,24 +671,20 @@ export default function Home() {
                           : availableBrands,
                       )
                     }
-                    className="text-[10px] text-slate-400 underline hover:text-slate-600"
+                    className="text-xs text-slate-400 font-medium"
                   >
                     {selectedBrands.length === availableBrands.length
                       ? "Tout décocher"
                       : "Tout cocher"}
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
                   {availableBrands.map((brand) => (
                     <button
                       key={brand}
                       type="button"
                       onClick={() => toggleBrand(brand)}
-                      className={`rounded-lg border px-2 py-1 transition ${
-                        selectedBrands.includes(brand)
-                          ? "border-slate-900 bg-slate-900 text-white"
-                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
-                      }`}
+                      className={`brand-tag ${selectedBrands.includes(brand) ? "brand-tag--selected" : ""}`}
                     >
                       {brand}
                     </button>
@@ -757,26 +693,20 @@ export default function Home() {
               </div>
             )}
             <div>
-              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-slate-900">
-                  {searchMode === "route" ? "Stations sur l'itinéraire" : "Stations aux alentours"}
+                  {searchMode === "route" ? "Stations sur le trajet" : "Stations proches"}
                 </h2>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <span>
-                    {filteredStations.length} résultat
-                    {filteredStations.length > 1 ? "s" : ""}
+                {hasSearched && (
+                  <span className="text-xs text-slate-400 font-medium">
+                    {filteredStations.length} résultat{filteredStations.length > 1 ? "s" : ""}
                   </span>
-                  <span className="hidden sm:inline">·</span>
-                  <span className="hidden sm:inline">Top 10 surlignés</span>
-                </div>
+                )}
               </div>
               {loading ? (
                 <div className="space-y-3">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <div
-                      key={`skeleton-${index}`}
-                      className="h-20 animate-pulse rounded-2xl border border-slate-200 bg-white"
-                    />
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div key={`skeleton-${index}`} className="skeleton" />
                   ))}
                 </div>
               ) : hasSearched ? (
@@ -787,16 +717,20 @@ export default function Home() {
                   }}
                 />
               ) : (
-                <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-10 text-sm text-slate-500">
-                  {searchMode === "route"
-                    ? "Lance une recherche pour afficher les stations sur ton trajet."
-                    : "Lance une recherche pour afficher les stations aux alentours."}
+                <div className="empty-state">
+                  <div className="text-3xl mb-3">⛽</div>
+                  <p className="font-medium text-slate-600 mb-1">Prêt à chercher</p>
+                  <p className="text-sm">
+                    {searchMode === "route"
+                      ? "Indique ton trajet pour trouver les stations les moins chères."
+                      : "Indique une adresse pour trouver les stations autour de toi."}
+                  </p>
                 </div>
               )}
             </div>
           </section>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -1,64 +1,66 @@
 import type { LatLng } from "./geo";
 
-type NominatimResult = {
-  lat: string;
-  lon: string;
-  display_name: string;
+/**
+ * Uses the French government BAN API (Base Adresse Nationale)
+ * https://adresse.data.gouv.fr/api-doc/adresse
+ * Free, no key required, very precise for French addresses.
+ */
+
+type BanFeature = {
+  properties: {
+    label: string;
+    id: string;
+    score: number;
+  };
+  geometry: {
+    coordinates: [number, number]; // [lon, lat]
+  };
 };
 
-type NominatimSuggestion = {
-  place_id: number;
-  display_name: string;
-};
-
-const NOMINATIM_HEADERS = {
-  "User-Agent": "monpleineco/1.0 (contact@monpleineco.local)",
-  "Accept-Language": "fr",
+type BanResponse = {
+  features: BanFeature[];
 };
 
 export const geocodeAddress = async (query: string) => {
-  const url = new URL("https://nominatim.openstreetmap.org/search");
-  url.searchParams.set("format", "json");
-  url.searchParams.set("limit", "1");
+  const url = new URL("https://api-adresse.data.gouv.fr/search/");
   url.searchParams.set("q", query);
+  url.searchParams.set("limit", "1");
 
-  const response = await fetch(url.toString(), { headers: NOMINATIM_HEADERS });
+  const response = await fetch(url.toString());
 
   if (!response.ok) {
     throw new Error("Erreur lors de la géolocalisation de l'adresse.");
   }
 
-  const data = (await response.json()) as NominatimResult[];
-  if (!data.length) {
+  const data = (await response.json()) as BanResponse;
+  if (!data.features.length) {
     throw new Error("Adresse introuvable.");
   }
 
-  const result = data[0];
-  const point: LatLng = {
-    lat: Number.parseFloat(result.lat),
-    lon: Number.parseFloat(result.lon),
-  };
+  const feature = data.features[0];
+  const [lon, lat] = feature.geometry.coordinates;
+  const point: LatLng = { lat, lon };
 
   return {
     point,
-    label: result.display_name,
+    label: feature.properties.label,
   };
 };
 
 export const autocompleteAddress = async (query: string) => {
-  const url = new URL("https://nominatim.openstreetmap.org/search");
-  url.searchParams.set("format", "json");
-  url.searchParams.set("limit", "5");
+  const url = new URL("https://api-adresse.data.gouv.fr/search/");
   url.searchParams.set("q", query);
+  url.searchParams.set("limit", "5");
+  url.searchParams.set("autocomplete", "1");
 
-  const response = await fetch(url.toString(), { headers: NOMINATIM_HEADERS });
+  const response = await fetch(url.toString());
   if (!response.ok) {
     throw new Error("Erreur lors de la récupération des suggestions.");
   }
 
-  const data = (await response.json()) as NominatimSuggestion[];
-  return data.map((item) => ({
-    id: item.place_id,
-    label: item.display_name,
+  const data = (await response.json()) as BanResponse;
+  return data.features.map((feature, index) => ({
+    id: index,
+    label: feature.properties.label,
   }));
 };

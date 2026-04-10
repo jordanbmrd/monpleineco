@@ -14,7 +14,7 @@
 }
 
 html {
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 body {
@@ -23,9 +23,12 @@ body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overscroll-behavior-y: none;
-  overflow-x: hidden;
-  max-width: 100vw;
+  overscroll-behavior: none;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100dvh;
 }
 
 * {
@@ -38,49 +41,127 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
 
 /* ── App shell ── */
 .app-shell {
-  min-height: 100dvh;
-  background: #f8fafc;
-  overflow-x: hidden;
-  width: 100%;
-}
-
-/* ── App header ── */
-.app-header {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: saturate(180%) blur(16px);
-  -webkit-backdrop-filter: saturate(180%) blur(16px);
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-  padding-top: env(safe-area-inset-top, 0);
-  width: 100%;
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
   overflow: hidden;
 }
 
-/* ── Search panel ── */
-.search-panel {
+/* ── Fullscreen map ── */
+.map-fullscreen {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.map-fullscreen .map-container {
+  height: 100% !important;
+  width: 100% !important;
+  border-radius: 0 !important;
+  border: none !important;
+}
+
+/* ── Panel overlay (bottom sheet on mobile, floating card on desktop) ── */
+.panel-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
   background: #ffffff;
-  border-radius: 20px;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-  padding: 20px;
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -8px 40px rgba(15, 23, 42, 0.12), 0 -2px 8px rgba(15, 23, 42, 0.06);
+  max-height: 58vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 @media (min-width: 1024px) {
-  .search-panel {
+  .panel-overlay {
+    bottom: 24px;
+    left: 24px;
+    right: auto;
+    width: 420px;
+    max-height: calc(100dvh - 48px);
     border-radius: 24px;
-    padding: 24px;
-    position: sticky;
-    top: 80px;
-    height: fit-content;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15), 0 4px 16px rgba(15, 23, 42, 0.08);
   }
+}
+
+/* ── Panel handle (mobile drag indicator) ── */
+.panel-handle-bar {
+  width: 36px;
+  height: 4px;
+  background: #cbd5e1;
+  border-radius: 99px;
+  margin: 10px auto 4px;
+  flex-shrink: 0;
+}
+
+@media (min-width: 1024px) {
+  .panel-handle-bar {
+    display: none;
+  }
+}
+
+/* ── Panel scrollable content ── */
+.panel-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 20px 20px;
+  overscroll-behavior: contain;
+}
+
+.panel-scroll::-webkit-scrollbar {
+  width: 0;
+}
+
+@media (min-width: 1024px) {
+  .panel-scroll {
+    padding: 16px 24px 24px;
+  }
+}
+
+/* Safe area padding at the bottom of scrollable content */
+.panel-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 12px);
+}
+
+/* ── Panel header ── */
+.panel-header {
+  margin-bottom: 16px;
+}
+
+/* ── Panel back button ── */
+.panel-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  background: #f1f5f9;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: 16px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.panel-back:active {
+  background: #e2e8f0;
+  transform: scale(0.97);
 }
 
 /* ── Segmented control ── */
@@ -124,7 +205,8 @@ body {
   border: 1.5px solid #e2e8f0;
   background: #ffffff;
   padding: 14px 16px;
-  font-size: 16px; /* prevents iOS zoom */
+  font-size: 16px;
+  /* prevents iOS zoom */
   color: #0f172a;
   transition: border-color 0.2s, box-shadow 0.2s;
   outline: none;
@@ -234,25 +316,11 @@ body {
   margin-bottom: 8px;
 }
 
-/* ── Map ── */
+/* ── Map container (base, overridden by .map-fullscreen) ── */
 .map-container {
-  height: 260px;
+  height: 100%;
   width: 100%;
-  border-radius: 20px;
   overflow: hidden;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-}
-
-@media (min-width: 640px) {
-  .map-container {
-    height: 420px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .map-container {
-    height: 500px;
-  }
 }
 
 /* ── Station pins ── */
@@ -375,7 +443,7 @@ body {
 }
 
 .autocomplete-list {
-  max-height: 240px;
+  max-height: 200px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -419,7 +487,7 @@ body {
   border-radius: 20px;
   border: 2px dashed #e2e8f0;
   background: #ffffff;
-  padding: 40px 24px;
+  padding: 32px 24px;
   text-align: center;
   color: #94a3b8;
   font-size: 14px;
@@ -435,8 +503,13 @@ body {
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* ── Route info pills ── */
@@ -452,7 +525,62 @@ body {
   color: #475569;
 }
 
-/* ── Safe areas ── */
-.safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0);
+/* ── Results header ── */
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.results-header .panel-back {
+  margin-bottom: 0;
+}
+
+/* ── Filter bar ── */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.filter-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 8px 30px 8px 12px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+  min-width: 0;
+}
+
+.filter-select:focus {
+  border-color: #0f172a;
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.06);
+}
+
+.filter-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  white-space: nowrap;
+  flex-shrink: 0;
 }

@@ -14,7 +14,7 @@ import type { MapViewRef } from "@/components/MapView";
 const MapView = dynamic(() => import("@/components/MapView"), {
   ssr: false,
   loading: () => (
-    <div className="map-container flex items-center justify-center bg-white text-sm text-slate-400">
+    <div className="flex items-center justify-center h-full w-full bg-slate-50 text-sm text-slate-400">
       Chargement de la carte...
     </div>
   ),
@@ -77,7 +77,6 @@ const loadRecentSearches = (): RecentSearch[] => {
 
 const saveRecentSearch = (search: RecentSearch) => {
   const existing = loadRecentSearches();
-  // Deduplicate by label
   const filtered = existing.filter((s) => s.label !== search.label);
   const updated = [search, ...filtered].slice(0, MAX_RECENT);
   localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
@@ -135,14 +134,12 @@ export default function Home() {
   const [hasSearched, setHasSearched] = useState(false);
 
   const [availableBrands, setAvailableBrands] = useState<string[]>([]);
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState<string>("");
+  const [sortBy, setSortBy] = useState<"price" | "distance">("price");
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
 
-  const toggleBrand = (brand: string) => {
-    setSelectedBrands((prev) =>
-      prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand],
-    );
-  };
+  // View state: 'form' = search form, 'results' = loading/results
+  const [viewState, setViewState] = useState<"form" | "results">("form");
 
   const handleFuelSelect = (id: number) => {
     setSelectedFuelId(id);
@@ -162,8 +159,16 @@ export default function Home() {
   );
 
   const filteredStations = useMemo(() => {
-    return stations.filter((s) => selectedBrands.includes(s.brand || "Autres"));
-  }, [stations, selectedBrands]);
+    const filtered = selectedBrand
+      ? stations.filter((s) => (s.brand || "Autres") === selectedBrand)
+      : stations;
+    const sorted = [...filtered].sort((a, b) =>
+      sortBy === "distance"
+        ? a.distanceToRoute - b.distanceToRoute
+        : a.bestPrice - b.bestPrice,
+    );
+    return sorted.map((s, i) => ({ ...s, rank: i + 1 }));
+  }, [stations, selectedBrand, sortBy]);
 
   const handleSwap = () => {
     setFromQuery(toQuery);
@@ -183,9 +188,10 @@ export default function Home() {
     setRoute(recent.route);
     setStations(recent.stations);
     setAvailableBrands(recent.availableBrands);
-    setSelectedBrands(recent.availableBrands);
+    setSelectedBrand("");
     setHasSearched(true);
     setError(null);
+    setViewState("results");
   };
 
   const fetchSuggestions = async (query: string): Promise<Suggestion[]> => {
@@ -280,6 +286,7 @@ export default function Home() {
     setError(null);
     setHasSearched(true);
     setLoading(true);
+    setViewState("results");
 
     try {
       const selectedFuelIds = [selectedFuelId];
@@ -371,7 +378,7 @@ export default function Home() {
           new Set(ranked.map((s) => s.brand || "Autres"))
         ).sort();
         setAvailableBrands(uniqueBrands);
-        setSelectedBrands(uniqueBrands);
+        setSelectedBrand("");
 
         setRecentSearches(saveRecentSearch({
           mode: "route",
@@ -386,7 +393,6 @@ export default function Home() {
           timestamp: Date.now(),
         }));
       } else {
-        // Mode "Autour de"
         if (!addressQuery.trim()) {
           throw new Error("Merci de renseigner une adresse.");
         }
@@ -401,7 +407,7 @@ export default function Home() {
           {
             points: [point],
             fuelIds: selectedFuelIds,
-            rangeMeters: 9999, // Max allowed by API is 10km
+            rangeMeters: 9999,
           },
         );
 
@@ -441,7 +447,7 @@ export default function Home() {
           new Set(ranked.map((s) => s.brand || "Autres"))
         ).sort();
         setAvailableBrands(uniqueBrands);
-        setSelectedBrands(uniqueBrands);
+        setSelectedBrand("");
 
         setRecentSearches(saveRecentSearch({
           mode: "around",
@@ -464,358 +470,358 @@ export default function Home() {
 
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <div className="mx-auto max-w-6xl flex items-center justify-between px-4 py-3 sm:px-6">
-          <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-            <span className="mr-1">⛽</span> Mon Plein Éco
-          </h1>
-          <span className="text-xs text-slate-400 hidden sm:inline">Trouvez le carburant le moins cher</span>
-        </div>
-      </header>
+      {/* Full-screen map background */}
+      <div className="map-fullscreen">
+        <MapView
+          route={route}
+          stations={filteredStations}
+          start={startPoint}
+          end={endPoint}
+          onMapReady={(ref) => {
+            mapViewRef.current = ref;
+          }}
+        />
+      </div>
 
-      <main className="mx-auto max-w-6xl px-4 pb-6 sm:px-6 safe-bottom">
-        <div className="grid gap-4 py-4 lg:grid-cols-[380px_1fr] lg:gap-6 lg:py-6">
-          <section className="search-panel min-w-0">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="segmented-control">
-                <button
-                  type="button"
-                  onClick={() => setSearchMode("around")}
-                  className={`segment ${searchMode === "around" ? "segment--active" : ""}`}
-                >
-                  Autour de moi
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSearchMode("route")}
-                  className={`segment ${searchMode === "route" ? "segment--active" : ""}`}
-                >
-                  Sur un trajet
-                </button>
+      {/* Bottom sheet (mobile) / Floating panel (desktop) */}
+      <div className="panel-overlay">
+        <div className="panel-handle-bar" />
+
+        <div className="panel-scroll">
+          {viewState === "form" ? (
+            /* ── Search form ── */
+            <div className="panel-safe-bottom">
+              <div className="panel-header">
+                <h1 className="text-lg font-bold text-slate-900 tracking-tight">
+                  <span className="mr-1">⛽</span> Mon Plein Éco
+                </h1>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Trouvez le carburant le moins cher
+                </p>
               </div>
 
-              {searchMode === "route" ? (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">
-                      Départ
-                    </label>
-                    <div className="relative">
-                      <input
-                        value={fromQuery}
-                        onChange={(event) => setFromQuery(event.target.value)}
-                        onFocus={() => setShowFromSuggestions(true)}
-                        onBlur={() =>
-                          window.setTimeout(() => setShowFromSuggestions(false), 150)
-                        }
-                        placeholder="Ville ou adresse de départ"
-                        className="search-input"
-                      />
-                      {showFromSuggestions && fromQuery.trim().length >= 3 && (
-                        <div className="autocomplete-panel">
-                          <div className="autocomplete-header">Suggestions</div>
-                          {loadingFromSuggestions ? (
-                            <div className="autocomplete-empty">
-                              Recherche en cours...
-                            </div>
-                          ) : fromSuggestions.length > 0 ? (
-                            <div className="autocomplete-list">
-                              {fromSuggestions.map((suggestion) => (
-                                <div
-                                  key={suggestion.id}
-                                  className="autocomplete-item"
-                                  onMouseDown={() => {
-                                    setFromQuery(suggestion.label);
-                                    setFromSuggestions([]);
-                                    setShowFromSuggestions(false);
-                                  }}
-                                >
-                                  {suggestion.label}
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="autocomplete-empty">
-                              Aucun résultat trouvé.
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="segmented-control">
                   <button
                     type="button"
-                    onClick={handleSwap}
-                    className="mx-auto flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-500 transition active:scale-95 active:bg-slate-200 touch-manipulation"
-                    aria-label="Inverser départ / arrivée"
+                    onClick={() => setSearchMode("around")}
+                    className={`segment ${searchMode === "around" ? "segment--active" : ""}`}
                   >
-                    ↕
+                    Autour de moi
                   </button>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">
-                      Arrivée
-                    </label>
-                    <div className="relative">
-                      <input
-                        value={toQuery}
-                        onChange={(event) => setToQuery(event.target.value)}
-                        onFocus={() => setShowToSuggestions(true)}
-                        onBlur={() =>
-                          window.setTimeout(() => setShowToSuggestions(false), 150)
-                        }
-                        placeholder="Ville ou adresse d'arrivée"
-                        className="search-input"
-                      />
-                      {showToSuggestions && toQuery.trim().length >= 3 && (
-                        <div className="autocomplete-panel">
-                          <div className="autocomplete-header">Suggestions</div>
-                          {loadingToSuggestions ? (
-                            <div className="autocomplete-empty">
-                              Recherche en cours...
-                            </div>
-                          ) : toSuggestions.length > 0 ? (
-                            <div className="autocomplete-list">
-                              {toSuggestions.map((suggestion) => (
-                                <div
-                                  key={suggestion.id}
-                                  className="autocomplete-item"
-                                  onMouseDown={() => {
-                                    setToQuery(suggestion.label);
-                                    setToSuggestions([]);
-                                    setShowToSuggestions(false);
-                                  }}
-                                >
-                                  {suggestion.label}
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="autocomplete-empty">
-                              Aucun résultat trouvé.
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {recentSearches.filter((s) => s.mode === "route").length > 0 && (
-                  <div>
-                    <p className="section-label">Recherches récentes</p>
-                    <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                      {recentSearches.filter((s) => s.mode === "route").map((recent) => (
-                        <button
-                          key={recent.timestamp}
-                          type="button"
-                          onClick={() => restoreRecentSearch(recent)}
-                          className="fuel-chip"
-                        >
-                          {recent.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">
-                      Adresse
-                    </label>
-                    <div className="relative">
-                      <input
-                        value={addressQuery}
-                        onChange={(event) => setAddressQuery(event.target.value)}
-                        onFocus={() => setShowAddressSuggestions(true)}
-                        onBlur={() =>
-                          window.setTimeout(() => setShowAddressSuggestions(false), 150)
-                        }
-                        placeholder="Ville ou adresse"
-                        className="search-input"
-                      />
-                      {showAddressSuggestions && addressQuery.trim().length >= 3 && (
-                        <div className="autocomplete-panel">
-                          <div className="autocomplete-header">Suggestions</div>
-                          {loadingAddressSuggestions ? (
-                            <div className="autocomplete-empty">
-                              Recherche en cours...
-                            </div>
-                          ) : addressSuggestions.length > 0 ? (
-                            <div className="autocomplete-list">
-                              {addressSuggestions.map((suggestion) => (
-                                <div
-                                  key={suggestion.id}
-                                  className="autocomplete-item"
-                                  onMouseDown={() => {
-                                    setAddressQuery(suggestion.label);
-                                    setAddressSuggestions([]);
-                                    setShowAddressSuggestions(false);
-                                  }}
-                                >
-                                  {suggestion.label}
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="autocomplete-empty">
-                              Aucun résultat trouvé.
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {recentSearches.filter((s) => s.mode === "around").length > 0 && (
-                    <div>
-                      <p className="section-label">Recherches récentes</p>
-                      <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                        {recentSearches.filter((s) => s.mode === "around").map((recent) => (
-                          <button
-                            key={recent.timestamp}
-                            type="button"
-                            onClick={() => restoreRecentSearch(recent)}
-                            className="fuel-chip"
-                          >
-                            {recent.label}
-                          </button>
-                        ))}
+                  <button
+                    type="button"
+                    onClick={() => setSearchMode("route")}
+                    className={`segment ${searchMode === "route" ? "segment--active" : ""}`}
+                  >
+                    Sur un trajet
+                  </button>
+                </div>
+
+                {searchMode === "route" ? (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">
+                        Départ
+                      </label>
+                      <div className="relative">
+                        <input
+                          value={fromQuery}
+                          onChange={(event) => setFromQuery(event.target.value)}
+                          onFocus={() => setShowFromSuggestions(true)}
+                          onBlur={() =>
+                            window.setTimeout(() => setShowFromSuggestions(false), 150)
+                          }
+                          placeholder="Ville ou adresse de départ"
+                          className="search-input"
+                        />
+                        {showFromSuggestions && fromQuery.trim().length >= 3 && (
+                          <div className="autocomplete-panel">
+                            <div className="autocomplete-header">Suggestions</div>
+                            {loadingFromSuggestions ? (
+                              <div className="autocomplete-empty">
+                                Recherche en cours...
+                              </div>
+                            ) : fromSuggestions.length > 0 ? (
+                              <div className="autocomplete-list">
+                                {fromSuggestions.map((suggestion) => (
+                                  <div
+                                    key={suggestion.id}
+                                    className="autocomplete-item"
+                                    onMouseDown={() => {
+                                      setFromQuery(suggestion.label);
+                                      setFromSuggestions([]);
+                                      setShowFromSuggestions(false);
+                                    }}
+                                  >
+                                    {suggestion.label}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="autocomplete-empty">
+                                Aucun résultat trouvé.
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
-                </>
-              )}
-
-              <div>
-                <p className="section-label">Carburants</p>
-                <div className="flex gap-2 flex-wrap">
-                  {fuelOptions.map((fuel) => (
                     <button
-                      key={fuel.id}
                       type="button"
-                      onClick={() => handleFuelSelect(fuel.id)}
-                      className={`fuel-chip ${selectedFuelId === fuel.id ? "fuel-chip--selected" : ""}`}
+                      onClick={handleSwap}
+                      className="mx-auto flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-500 transition active:scale-95 active:bg-slate-200 touch-manipulation"
+                      aria-label="Inverser départ / arrivée"
                     >
-                      {fuel.label}
+                      ↕
                     </button>
-                  ))}
-                </div>
-              </div>
-              {searchMode === "route" && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">
+                        Arrivée
+                      </label>
+                      <div className="relative">
+                        <input
+                          value={toQuery}
+                          onChange={(event) => setToQuery(event.target.value)}
+                          onFocus={() => setShowToSuggestions(true)}
+                          onBlur={() =>
+                            window.setTimeout(() => setShowToSuggestions(false), 150)
+                          }
+                          placeholder="Ville ou adresse d'arrivée"
+                          className="search-input"
+                        />
+                        {showToSuggestions && toQuery.trim().length >= 3 && (
+                          <div className="autocomplete-panel">
+                            <div className="autocomplete-header">Suggestions</div>
+                            {loadingToSuggestions ? (
+                              <div className="autocomplete-empty">
+                                Recherche en cours...
+                              </div>
+                            ) : toSuggestions.length > 0 ? (
+                              <div className="autocomplete-list">
+                                {toSuggestions.map((suggestion) => (
+                                  <div
+                                    key={suggestion.id}
+                                    className="autocomplete-item"
+                                    onMouseDown={() => {
+                                      setToQuery(suggestion.label);
+                                      setToSuggestions([]);
+                                      setShowToSuggestions(false);
+                                    }}
+                                  >
+                                    {suggestion.label}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="autocomplete-empty">
+                                Aucun résultat trouvé.
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="section-label">Options</p>
+                      <div className="flex gap-2">
+                        <label className={`toggle-chip ${avoidTolls ? "toggle-chip--selected" : ""}`}>
+                          <input type="radio" checked={avoidTolls} onChange={() => setAvoidTolls(true)} className="hidden" />
+                          Sans péages
+                        </label>
+                        <label className={`toggle-chip ${!avoidTolls ? "toggle-chip--selected" : ""}`}>
+                          <input type="radio" checked={!avoidTolls} onChange={() => setAvoidTolls(false)} className="hidden" />
+                          Avec péages
+                        </label>
+                      </div>
+                    </div>
+                    {recentSearches.filter((s) => s.mode === "route").length > 0 && (
+                      <div>
+                        <p className="section-label">Recherches récentes</p>
+                        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                          {recentSearches.filter((s) => s.mode === "route").map((recent) => (
+                            <button
+                              key={recent.timestamp}
+                              type="button"
+                              onClick={() => restoreRecentSearch(recent)}
+                              className="fuel-chip"
+                            >
+                              {recent.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">
+                        Adresse
+                      </label>
+                      <div className="relative">
+                        <input
+                          value={addressQuery}
+                          onChange={(event) => setAddressQuery(event.target.value)}
+                          onFocus={() => setShowAddressSuggestions(true)}
+                          onBlur={() =>
+                            window.setTimeout(() => setShowAddressSuggestions(false), 150)
+                          }
+                          placeholder="Ville ou adresse"
+                          className="search-input"
+                        />
+                        {showAddressSuggestions && addressQuery.trim().length >= 3 && (
+                          <div className="autocomplete-panel">
+                            <div className="autocomplete-header">Suggestions</div>
+                            {loadingAddressSuggestions ? (
+                              <div className="autocomplete-empty">
+                                Recherche en cours...
+                              </div>
+                            ) : addressSuggestions.length > 0 ? (
+                              <div className="autocomplete-list">
+                                {addressSuggestions.map((suggestion) => (
+                                  <div
+                                    key={suggestion.id}
+                                    className="autocomplete-item"
+                                    onMouseDown={() => {
+                                      setAddressQuery(suggestion.label);
+                                      setAddressSuggestions([]);
+                                      setShowAddressSuggestions(false);
+                                    }}
+                                  >
+                                    {suggestion.label}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="autocomplete-empty">
+                                Aucun résultat trouvé.
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {recentSearches.filter((s) => s.mode === "around").length > 0 && (
+                      <div>
+                        <p className="section-label">Recherches récentes</p>
+                        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                          {recentSearches.filter((s) => s.mode === "around").map((recent) => (
+                            <button
+                              key={recent.timestamp}
+                              type="button"
+                              onClick={() => restoreRecentSearch(recent)}
+                              className="fuel-chip"
+                            >
+                              {recent.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
                 <div>
-                  <p className="section-label">Options</p>
-                  <div className="flex gap-2">
-                    <label className={`toggle-chip ${avoidTolls ? "toggle-chip--selected" : ""}`}>
-                      <input type="radio" checked={avoidTolls} onChange={() => setAvoidTolls(true)} className="hidden" />
-                      Sans péages
-                    </label>
-                    <label className={`toggle-chip ${!avoidTolls ? "toggle-chip--selected" : ""}`}>
-                      <input type="radio" checked={!avoidTolls} onChange={() => setAvoidTolls(false)} className="hidden" />
-                      Avec péages
-                    </label>
+                  <p className="section-label">Carburant</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {fuelOptions.map((fuel) => (
+                      <button
+                        key={fuel.id}
+                        type="button"
+                        onClick={() => handleFuelSelect(fuel.id)}
+                        className={`fuel-chip ${selectedFuelId === fuel.id ? "fuel-chip--selected" : ""}`}
+                      >
+                        {fuel.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              )}
-              {error && <div className="error-banner">{error}</div>}
-              <button
-                type="submit"
-                disabled={loading || !isReadyToSearch}
-                className="btn-primary"
-              >
-                {loading ? "Recherche en cours..." : "Rechercher"}
-              </button>
-            </form>
 
-            {route && (
-              <div className="mt-4 flex gap-2 flex-wrap">
-                <span className="route-pill">📏 {formatDistance(route.distance)}</span>
-                <span className="route-pill">⏱️ {formatDuration(route.duration)}</span>
-              </div>
-            )}
-          </section>
+                {error && <div className="error-banner">{error}</div>}
 
-          <section className="space-y-4 sm:space-y-6 min-w-0 overflow-hidden">
-            <MapView
-              route={route}
-              stations={filteredStations}
-              start={startPoint}
-              end={endPoint}
-              onMapReady={(ref) => {
-                mapViewRef.current = ref;
-              }}
-            />
-            {hasSearched && availableBrands.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="section-label mb-0">Marques</p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSelectedBrands(
-                        selectedBrands.length === availableBrands.length
-                          ? []
-                          : availableBrands,
-                      )
-                    }
-                    className="text-xs text-slate-400 font-medium"
-                  >
-                    {selectedBrands.length === availableBrands.length
-                      ? "Tout décocher"
-                      : "Tout cocher"}
-                  </button>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  {availableBrands.map((brand) => (
-                    <button
-                      key={brand}
-                      type="button"
-                      onClick={() => toggleBrand(brand)}
-                      className={`brand-tag ${selectedBrands.includes(brand) ? "brand-tag--selected" : ""}`}
-                    >
-                      {brand}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div>
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-900">
-                  {searchMode === "route" ? "Stations sur le trajet" : "Stations proches"}
-                </h2>
-                {hasSearched && (
-                  <span className="text-xs text-slate-400 font-medium">
-                    {filteredStations.length} résultat{filteredStations.length > 1 ? "s" : ""}
+                <button
+                  type="submit"
+                  disabled={loading || !isReadyToSearch}
+                  className="btn-primary"
+                >
+                  {loading ? "Recherche en cours..." : "Rechercher"}
+                </button>
+              </form>
+            </div>
+          ) : (
+            /* ── Results view ── */
+            <div className="panel-safe-bottom">
+              <div className="results-header">
+                <button
+                  type="button"
+                  className="panel-back"
+                  onClick={() => setViewState("form")}
+                >
+                  ← Retour
+                </button>
+                {hasSearched && !loading && (
+                  <span className="filter-count">
+                    {filteredStations.length} résultat
+                    {filteredStations.length > 1 ? "s" : ""}
                   </span>
                 )}
               </div>
+
+              {error && <div className="error-banner mb-3">{error}</div>}
+
+              {route && (
+                <div className="flex gap-2 flex-wrap mb-4">
+                  <span className="route-pill">📏 {formatDistance(route.distance)}</span>
+                  <span className="route-pill">⏱️ {formatDuration(route.duration)}</span>
+                </div>
+              )}
+
+              {hasSearched && !loading && (
+                <div className="filter-bar">
+                  <div className="filter-group">
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as "price" | "distance")}
+                      className="filter-select"
+                    >
+                      <option value="price">Prix croissant</option>
+                      <option value="distance">Distance</option>
+                    </select>
+                    {availableBrands.length > 0 && (
+                      <select
+                        value={selectedBrand}
+                        onChange={(e) => setSelectedBrand(e.target.value)}
+                        className="filter-select"
+                      >
+                        <option value="">Toutes les marques</option>
+                        {availableBrands.map((brand) => (
+                          <option key={brand} value={brand}>{brand}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {loading ? (
                 <div className="space-y-3">
                   {Array.from({ length: 4 }).map((_, index) => (
                     <div key={`skeleton-${index}`} className="skeleton" />
                   ))}
                 </div>
-              ) : hasSearched ? (
+              ) : (
                 <StationList
                   stations={filteredStations}
                   onCenterMap={(lat, lon) => {
                     mapViewRef.current?.centerOnStation(lat, lon);
                   }}
                 />
-              ) : (
-                <div className="empty-state">
-                  <div className="text-3xl mb-3">⛽</div>
-                  <p className="font-medium text-slate-600 mb-1">Prêt à chercher</p>
-                  <p className="text-sm">
-                    {searchMode === "route"
-                      ? "Indique ton trajet pour trouver les stations les moins chères."
-                      : "Indique une adresse pour trouver les stations autour de toi."}
-                  </p>
-                </div>
               )}
             </div>
-          </section>
+          )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

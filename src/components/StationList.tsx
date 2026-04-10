@@ -44,7 +44,7 @@ const StationList = ({ stations, onCenterMap }: StationListProps) => {
     };
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-3 mt-[8px]">
             {stations.map((station) => (
                 <div
                     key={station.id}

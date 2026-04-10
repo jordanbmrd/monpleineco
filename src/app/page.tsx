@@ -140,6 +140,15 @@ export default function Home() {
 
   // View state: 'form' = search form, 'results' = loading/results
   const [viewState, setViewState] = useState<"form" | "results">("form");
+  const [panelMode, setPanelMode] = useState<"default" | "expanded" | "minimized">("default");
+
+  useEffect(() => {
+    if (viewState === "results") {
+      setPanelMode("expanded");
+    } else {
+      setPanelMode("default");
+    }
+  }, [viewState]);
 
   const handleFuelSelect = (id: number) => {
     setSelectedFuelId(id);
@@ -484,9 +493,17 @@ export default function Home() {
       </div>
 
       {/* Bottom sheet (mobile) / Floating panel (desktop) */}
-      <div className="panel-overlay">
+      <div
+        className={`panel-overlay${panelMode === "expanded" ? " panel-overlay--expanded" : ""}${panelMode === "minimized" ? " panel-overlay--minimized" : ""}`}
+        onClick={panelMode === "minimized" ? () => setPanelMode("expanded") : undefined}
+      >
         <div className="panel-handle-bar" />
 
+        {panelMode === "minimized" ? (
+          <div className="panel-minimized-strip">
+            <span>Cliquez pour ouvrir les résultats</span>
+          </div>
+        ) : (
         <div className="panel-scroll">
           {viewState === "form" ? (
             /* ── Search form ── */
@@ -814,13 +831,17 @@ export default function Home() {
                 <StationList
                   stations={filteredStations}
                   onCenterMap={(lat, lon) => {
-                    mapViewRef.current?.centerOnStation(lat, lon);
+                    setPanelMode("minimized");
+                    setTimeout(() => {
+                      mapViewRef.current?.openStationPopup(lat, lon);
+                    }, 400);
                   }}
                 />
               )}
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );

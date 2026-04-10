@@ -82,6 +82,32 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.panel-overlay--expanded {
+  max-height: 90dvh;
+}
+
+.panel-overlay--minimized {
+  max-height: 64px;
+  cursor: pointer;
+}
+
+.panel-minimized-strip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 64px;
+  gap: 4px;
+  user-select: none;
+}
+
+.panel-minimized-strip span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
 }
 
 @media (min-width: 1024px) {
@@ -93,6 +119,14 @@ body {
     max-height: calc(100dvh - 48px);
     border-radius: 24px;
     box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15), 0 4px 16px rgba(15, 23, 42, 0.08);
+  }
+
+  .panel-overlay--expanded {
+    max-height: calc(100dvh - 48px);
+  }
+
+  .panel-overlay--minimized {
+    max-height: 64px;
   }
 }
 

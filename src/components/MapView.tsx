@@ -19,6 +19,7 @@ type RouteData = {
 
 export type MapViewRef = {
     centerOnStation: (lat: number, lon: number) => void;
+    openStationPopup: (lat: number, lon: number) => void;
 };
 
 type MapViewProps = {
@@ -74,8 +75,8 @@ const FitBounds = ({
 };
 
 const MapController = forwardRef<
-    { centerOnStation: (lat: number, lon: number) => void },
-    { mapRef: React.MutableRefObject<L.Map | null>; onReady?: (ref: { centerOnStation: (lat: number, lon: number) => void }) => void }
+    MapViewRef,
+    { mapRef: React.MutableRefObject<L.Map | null>; onReady?: (ref: MapViewRef) => void }
 >(({ mapRef, onReady }, ref) => {
     const map = useMap();
     mapRef.current = map;
@@ -84,13 +85,34 @@ const MapController = forwardRef<
         map.setView([lat, lon], 15, { animate: true, duration: 0.5 });
     };
 
+    const openStationPopup = (lat: number, lon: number) => {
+        map.invalidateSize();
+        map.setView([lat, lon], 15, { animate: true, duration: 0.5 });
+        map.once("moveend", () => {
+            map.invalidateSize();
+            try {
+                map.eachLayer((layer) => {
+                    if (layer instanceof L.Marker) {
+                        const pos = layer.getLatLng();
+                        if (Math.abs(pos.lat - lat) < 0.0001 && Math.abs(pos.lng - lon) < 0.0001) {
+                            layer.openPopup();
+                        }
+                    }
+                });
+            } catch {
+                // Map container may not be ready yet during CSS transitions
+            }
+        });
+    };
+
     useImperativeHandle(ref, () => ({
         centerOnStation,
+        openStationPopup,
     }));
 
     useEffect(() => {
         if (onReady) {
-            onReady({ centerOnStation });
+            onReady({ centerOnStation, openStationPopup });
         }
     }, [onReady]);
 
@@ -100,7 +122,7 @@ MapController.displayName = "MapController";
 
 const MapView = ({ route, stations, start, end, onMapReady }: MapViewProps) => {
     const mapRef = useRef<L.Map | null>(null);
-    const controllerRef = useRef<{ centerOnStation: (lat: number, lon: number) => void }>(null);
+    const controllerRef = useRef<MapViewRef>(null);
 
     useEffect(() => {
         L.Icon.Default.mergeOptions({

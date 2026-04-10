@@ -229,6 +229,44 @@ export default function Home() {
     return { lat, lon };
   };
 
+  const [geolocating, setGeolocating] = useState(false);
+
+  const handleGeolocate = () => {
+    if (!navigator.geolocation) return;
+    setGeolocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const url = `https://photon.komoot.io/reverse?lon=${longitude}&lat=${latitude}&lang=fr`;
+          const res = await fetch(url);
+          if (res.ok) {
+            const data = await res.json() as { features: Array<{ properties: { name?: string; street?: string; housenumber?: string; city?: string; postcode?: string } }> };
+            if (data.features.length > 0) {
+              const p = data.features[0].properties;
+              const parts: string[] = [];
+              if (p.name) parts.push(p.name);
+              if (p.housenumber && p.street) parts.push(`${p.housenumber} ${p.street}`);
+              else if (p.street) parts.push(p.street);
+              if (p.postcode || p.city) parts.push([p.postcode, p.city].filter(Boolean).join(" "));
+              setAddressQuery(parts.join(", ") || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+            } else {
+              setAddressQuery(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+            }
+          }
+        } catch {
+          setAddressQuery(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+        } finally {
+          setGeolocating(false);
+        }
+      },
+      () => {
+        setGeolocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+
   useEffect(() => {
     setRecentSearches(loadRecentSearches());
   }, []);
@@ -677,16 +715,31 @@ export default function Home() {
                         Adresse
                       </label>
                       <div className="relative">
-                        <input
-                          value={addressQuery}
-                          onChange={(event) => setAddressQuery(event.target.value)}
-                          onFocus={() => setShowAddressSuggestions(true)}
-                          onBlur={() =>
-                            window.setTimeout(() => setShowAddressSuggestions(false), 150)
-                          }
-                          placeholder="Ville ou adresse"
-                          className="search-input"
-                        />
+                        <div className="input-with-action">
+                          <input
+                            value={addressQuery}
+                            onChange={(event) => setAddressQuery(event.target.value)}
+                            onFocus={() => setShowAddressSuggestions(true)}
+                            onBlur={() =>
+                              window.setTimeout(() => setShowAddressSuggestions(false), 150)
+                            }
+                            placeholder="Ville ou adresse"
+                            className="search-input search-input--with-action"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleGeolocate}
+                            disabled={geolocating}
+                            className="geolocate-btn"
+                            aria-label="Me localiser"
+                          >
+                            {geolocating ? (
+                              <svg className="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#94a3b8" strokeWidth="2.5" strokeDasharray="50" strokeLinecap="round" /></svg>
+                            ) : (
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4" /><line x1="12" y1="2" x2="12" y2="6" /><line x1="12" y1="18" x2="12" y2="22" /><line x1="2" y1="12" x2="6" y2="12" /><line x1="18" y1="12" x2="22" y2="12" /></svg>
+                            )}
+                          </button>
+                        </div>
                         {showAddressSuggestions && addressQuery.trim().length >= 3 && (
                           <div className="autocomplete-panel">
                             <div className="autocomplete-header">Suggestions</div>

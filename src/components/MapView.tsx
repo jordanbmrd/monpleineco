@@ -147,6 +147,7 @@ const MapView = ({ route, stations, start, end, onMapReady }: MapViewProps) => {
             center={[48.8566, 2.3522]}
             zoom={6}
             scrollWheelZoom
+            zoomControl={false}
             className="map-container"
         >
             <TileLayer

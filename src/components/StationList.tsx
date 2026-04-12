@@ -10,6 +10,7 @@ type StationItem = Station & {
 type StationListProps = {
     stations: StationItem[];
     onCenterMap?: (lat: number, lon: number) => void;
+    onSelect?: (station: StationItem) => void;
 };
 
 const formatPrice = (value: number) =>
@@ -46,7 +47,7 @@ const rankEmoji = (rank: number) => {
     return null;
 };
 
-const StationList = ({ stations, onCenterMap }: StationListProps) => {
+const StationList = ({ stations, onCenterMap, onSelect }: StationListProps) => {
     if (!stations.length) {
         return (
             <div className="empty-state">
@@ -83,6 +84,8 @@ const StationList = ({ stations, onCenterMap }: StationListProps) => {
                     <div
                         key={station.id}
                         className={`station-card ${rankClass(station.rank)} ${station.rank <= 10 ? "station-card--top" : ""}`}
+                        onClick={() => onSelect?.(station)}
+                        style={{ cursor: onSelect ? "pointer" : undefined }}
                     >
                         <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
@@ -189,9 +192,10 @@ const StationList = ({ stations, onCenterMap }: StationListProps) => {
                         <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
                             {onCenterMap && (
                                 <button
-                                    onClick={() =>
-                                        onCenterMap(station.coordinates.lat, station.coordinates.lon)
-                                    }
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onCenterMap(station.coordinates.lat, station.coordinates.lon);
+                                    }}
                                     className="card-action"
                                 >
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -202,9 +206,10 @@ const StationList = ({ stations, onCenterMap }: StationListProps) => {
                                 </button>
                             )}
                             <button
-                                onClick={() =>
-                                    openInGoogleMaps(station.coordinates.lat, station.coordinates.lon)
-                                }
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    openInGoogleMaps(station.coordinates.lat, station.coordinates.lon);
+                                }}
                                 className="card-action card-action--nav"
                             >
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

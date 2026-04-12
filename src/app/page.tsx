@@ -9,6 +9,7 @@ import {
   sampleRoutePoints,
 } from "@/lib/geo";
 import StationList from "@/components/StationList";
+import StationDetail from "@/components/StationDetail";
 import type { MapViewRef } from "@/components/MapView";
 
 const MapView = dynamic(() => import("@/components/MapView"), {
@@ -141,6 +142,7 @@ export default function Home() {
   // View state: 'form' = search form, 'results' = loading/results
   const [viewState, setViewState] = useState<"form" | "results">("form");
   const [panelMode, setPanelMode] = useState<"default" | "expanded" | "minimized">("default");
+  const [selectedStation, setSelectedStation] = useState<StationWithMetrics | null>(null);
 
   useEffect(() => {
     if (viewState === "results") {
@@ -815,81 +817,108 @@ export default function Home() {
           ) : (
             /* ── Results view ── */
             <div className="panel-safe-bottom">
-              <div className="results-header">
-                <button
-                  type="button"
-                  className="panel-back"
-                  onClick={() => setViewState("form")}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                  Retour
-                </button>
-                {hasSearched && !loading && (
-                  <span className="filter-count">
-                    {filteredStations.length} résultat
-                    {filteredStations.length > 1 ? "s" : ""}
-                  </span>
-                )}
-              </div>
-
-              {error && <div className="error-banner mb-3">{error}</div>}
-
-              {route && (
-                <div className="flex gap-2 flex-wrap mb-4">
-                  <span className="route-pill">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="2" y1="12" x2="22" y2="12"/><polyline points="15 5 22 12 15 19"/><polyline points="9 5 2 12 9 19"/></svg>
-                    {formatDistance(route.distance)}
-                  </span>
-                  <span className="route-pill">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    {formatDuration(route.duration)}
-                  </span>
-                </div>
-              )}
-
-              {hasSearched && !loading && (
-                <div className="filter-bar">
-                  <div className="filter-group">
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as "price" | "distance")}
-                      className="filter-select"
+              {selectedStation ? (
+                <StationDetail
+                  station={selectedStation}
+                  onBack={() => setSelectedStation(null)}
+                />
+              ) : (
+                <>
+                  <div className="results-header">
+                    <button
+                      type="button"
+                      className="panel-back"
+                      onClick={() => { setViewState("form"); setSelectedStation(null); }}
                     >
-                      <option value="price">Prix croissant</option>
-                      <option value="distance">Distance</option>
-                    </select>
-                    {availableBrands.length > 0 && (
-                      <select
-                        value={selectedBrand}
-                        onChange={(e) => setSelectedBrand(e.target.value)}
-                        className="filter-select"
-                      >
-                        <option value="">Toutes les marques</option>
-                        {availableBrands.map((brand) => (
-                          <option key={brand} value={brand}>{brand}</option>
-                        ))}
-                      </select>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                      Retour
+                    </button>
+                    {hasSearched && !loading && (
+                      <span className="filter-count">
+                        {filteredStations.length} résultat
+                        {filteredStations.length > 1 ? "s" : ""}
+                      </span>
                     )}
                   </div>
-                </div>
-              )}
 
-              {loading ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <div key={`skeleton-${index}`} className="skeleton" />
-                  ))}
-                </div>
-              ) : (
-                <StationList
-                  stations={filteredStations}
-                  onCenterMap={(lat, lon) => {
-                    setPanelMode("minimized");
-                    setTimeout(() => {
-                      mapViewRef.current?.openStationPopup(lat, lon);
-                    }, 400);
-                  }}
-                />
+                  {error && <div className="error-banner mb-3">{error}</div>}
+
+                  {route && (
+                    <div className="flex gap-2 flex-wrap mb-4">
+                      <span className="route-pill">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="2" y1="12" x2="22" y2="12"/><polyline points="15 5 22 12 15 19"/><polyline points="9 5 2 12 9 19"/></svg>
+                        {formatDistance(route.distance)}
+                      </span>
+                      <span className="route-pill">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        {formatDuration(route.duration)}
+                      </span>
+                    </div>
+                  )}
+
+                  {hasSearched && !loading && (
+                    <div className="filter-bar">
+                      <div className="filter-group">
+                        <select
+                          value={sortBy}
+                          onChange={(e) => setSortBy(e.target.value as "price" | "distance")}
+                          className="filter-select"
+                        >
+                          <option value="price">Prix croissant</option>
+                          <option value="distance">Distance</option>
+                        </select>
+                        {availableBrands.length > 0 && (
+                          <select
+                            value={selectedBrand}
+                            onChange={(e) => setSelectedBrand(e.target.value)}
+                            className="filter-select"
+                          >
+                            <option value="">Toutes les marques</option>
+                            {availableBrands.map((brand) => (
+                              <option key={brand} value={brand}>{brand}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {loading ? (
+                    <div className="space-y-3">
+                      {Array.from({ length: 4 }).map((_, index) => (
+                        <div key={`skeleton-${index}`} className="skeleton" />
+                      ))}
+                    </div>
+                  ) : (
+                    <StationList
+                      stations={filteredStations}
+                      onSelect={(station) => {
+                        setSelectedStation(station);
+                        const isMobile = window.innerWidth < 1024;
+                        if (isMobile) setPanelMode("default");
+                        setTimeout(() => {
+                          // On mobile, offset the marker upward so it sits in the
+                          // visible area above the panel (58vh).
+                          // panBy([0, positive]) moves the map down → marker goes up.
+                          const offsetY = isMobile
+                            ? Math.round(window.innerHeight * 0.29)
+                            : 0;
+                          mapViewRef.current?.openStationPopup(
+                            station.coordinates.lat,
+                            station.coordinates.lon,
+                            offsetY,
+                          );
+                        }, 50);
+                      }}
+                      onCenterMap={(lat, lon) => {
+                        setPanelMode("minimized");
+                        setTimeout(() => {
+                          mapViewRef.current?.openStationPopup(lat, lon);
+                        }, 400);
+                      }}
+                    />
+                  )}
+                </>
               )}
             </div>
           )}

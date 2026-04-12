@@ -19,7 +19,7 @@ type RouteData = {
 
 export type MapViewRef = {
     centerOnStation: (lat: number, lon: number) => void;
-    openStationPopup: (lat: number, lon: number) => void;
+    openStationPopup: (lat: number, lon: number, offsetY?: number) => void;
 };
 
 type MapViewProps = {
@@ -85,11 +85,14 @@ const MapController = forwardRef<
         map.setView([lat, lon], 15, { animate: true, duration: 0.5 });
     };
 
-    const openStationPopup = (lat: number, lon: number) => {
+    const openStationPopup = (lat: number, lon: number, offsetY?: number) => {
         map.invalidateSize();
         map.setView([lat, lon], 15, { animate: true, duration: 0.5 });
         map.once("moveend", () => {
             map.invalidateSize();
+            if (offsetY) {
+                map.panBy([0, offsetY], { animate: false });
+            }
             try {
                 map.eachLayer((layer) => {
                     if (layer instanceof L.Marker) {

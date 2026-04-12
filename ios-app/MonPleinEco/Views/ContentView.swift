@@ -12,81 +12,33 @@ struct ContentView: View {
     @State private var selectedTab: Tab = .home
 
     enum Tab: String {
-        case home, route, favorites, profile
+        case home, favorites, profile
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-                HomeMapView(vm: vm)
-                    .tag(Tab.home)
-
-                RouteSearchView(vm: vm)
-                    .tag(Tab.route)
-
-                FavoritesView()
-                    .tag(Tab.favorites)
-
-                ProfileView()
-                    .tag(Tab.profile)
-            }
-            .toolbar(.hidden, for: .tabBar)
-
-            customTabBar
-        }
-        .task { await vm.setupInitialLocation() }
-    }
-
-    // MARK: - Custom Tab Bar
-
-    private var customTabBar: some View {
-        HStack(spacing: 0) {
-            tabItem(tab: .home, icon: "house.fill", label: "Accueil")
-            tabItem(tab: .route, icon: "arrow.triangle.swap", label: "Trajet")
-            tabItem(tab: .favorites, icon: "heart.fill", label: "Favoris")
-            tabItem(tab: .profile, icon: "person.fill", label: "Profil")
-        }
-        .padding(.horizontal, 8)
-        .padding(.top, 10)
-        .padding(.bottom, 6)
-        .background(
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.06), radius: 12, y: -4)
-                .ignoresSafeArea(edges: .bottom)
-        )
-    }
-
-    private func tabItem(tab: Tab, icon: String, label: String) -> some View {
-        Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                selectedTab = tab
-            }
-        } label: {
-            VStack(spacing: 4) {
-                ZStack {
-                    if selectedTab == tab {
-                        Circle()
-                            .fill(Color.brand)
-                            .frame(width: 44, height: 44)
-                            .transition(.scale.combined(with: .opacity))
-                    }
-
-                    Image(systemName: icon)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(selectedTab == tab ? .white : .secondary)
+        TabView(selection: $selectedTab) {
+            HomeMapView(vm: vm)
+                .tag(Tab.home)
+                .tabItem {
+                    Label("Accueil", systemImage: "house.fill")
                 }
-                .frame(width: 44, height: 44)
 
-                Text(label)
-                    .font(.system(size: 10, weight: selectedTab == tab ? .bold : .medium))
-                    .foregroundStyle(selectedTab == tab ? .brand : .secondary)
-            }
-            .frame(maxWidth: .infinity)
+            FavoritesView()
+                .tag(Tab.favorites)
+                .tabItem {
+                    Label("Favoris", systemImage: "heart.fill")
+                }
+
+            ProfileView()
+                .tag(Tab.profile)
+                .tabItem {
+                    Label("Profil", systemImage: "person.fill")
+                }
         }
-        .buttonStyle(.plain)
-        .sensoryFeedback(.selection, trigger: selectedTab)
-        .accessibilityLabel(label)
+        .tint(.brand)
+        .toolbar(vm.isHomeSearchExpanded ? .hidden : .automatic, for: .tabBar)
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: vm.isHomeSearchExpanded)
+        .task { await vm.setupInitialLocation() }
     }
 }
 
@@ -137,6 +89,25 @@ struct PriceAnnotationView: View {
                 .frame(width: 12, height: 6)
                 .offset(y: -1)
         }
+    }
+}
+
+// MARK: - Cluster Annotation
+
+struct ClusterAnnotationView: View {
+    let count: Int
+
+    var body: some View {
+        Text("\(count)+")
+            .font(.system(.caption, design: .rounded, weight: .heavy))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(
+                Circle()
+                    .fill(Color.brand.opacity(0.85))
+            )
+            .shadow(color: Color.brand.opacity(0.3), radius: 6, y: 3)
     }
 }
 

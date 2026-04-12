@@ -27,6 +27,7 @@ final class SearchViewModel {
     var isLoading = false
     var error: String?
     var selectedStation: StationWithMetrics?
+    var isHomeSearchExpanded = false
 
     // MARK: - Results
     var stations: [StationWithMetrics] = []
@@ -47,11 +48,35 @@ final class SearchViewModel {
     /// Coordinate used to center the map on launch (nil = fall back to Paris)
     var userCoordinate: CLLocationCoordinate2D?
 
+    private var fuelObserver: NSObjectProtocol?
+
     init() {
         recentSearches = SearchHistoryManager.load()
+        syncFuelFromDefaults()
+
+        fuelObserver = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.syncFuelFromDefaults()
+        }
     }
 
-    // Called once at app launch: asks for location, fills addressQuery and exposes userCoordinate.
+    deinit {
+        if let obs = fuelObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
+    }
+
+    private func syncFuelFromDefaults() {
+        let savedRaw = UserDefaults.standard.integer(forKey: "defaultFuelRawValue")
+        if savedRaw != 0, let fuel = FuelType(rawValue: savedRaw), fuel != selectedFuel {
+            selectedFuel = fuel
+        }
+    }
+
+    // Called once at app launch: asks for location, fills addressQuery, recentre la carte, puis lance une recherche « autour ».
     @MainActor
     func setupInitialLocation() async {
         guard let coord = await locationManager.locateForStartup() else { return }
@@ -66,6 +91,8 @@ final class SearchViewModel {
                     .joined(separator: " ")
                 if !label.isEmpty {
                     addressQuery = label
+                    searchMode = .around
+                    await search()
                 }
             }
         } catch {
@@ -103,6 +130,26 @@ final class SearchViewModel {
         }
     }
 
+    // MARK: - Mode switching
+
+    /// Tracks which mode produced the current results so we can clear on switch
+    private var lastSearchMode: SearchMode?
+
+    func switchMode(to mode: SearchMode) {
+        guard mode != searchMode else { return }
+        searchMode = mode
+        error = nil
+        selectedStation = nil
+
+        if mode != lastSearchMode {
+            stations = []
+            routeResult = nil
+            startPoint = nil
+            endPoint = nil
+            viewState = .form
+        }
+    }
+
     // MARK: - Actions
 
     func swapRouteEndpoints() {
@@ -114,11 +161,16 @@ final class SearchViewModel {
 
     @MainActor
     func search() async {
-        guard isReadyToSearch else { return }
+        guard isReadyToSearch else {
+            AppLog.search.debug("search aborted: not ready (mode=\(String(describing: self.searchMode)) address='\(self.addressQuery)' from='\(self.fromQuery)' to='\(self.toQuery)')")
+            return
+        }
         error = nil
         isLoading = true
         viewState = .results
         selectedStation = nil
+
+        AppLog.search.debug("search start mode=\(String(describing: self.searchMode)) fuel=\(self.selectedFuel.label) rawValue=\(self.selectedFuel.rawValue)")
 
         do {
             if searchMode == .route {
@@ -126,7 +178,10 @@ final class SearchViewModel {
             } else {
                 try await searchAround()
             }
+            lastSearchMode = searchMode
+            AppLog.search.debug("search done stations.count=\(self.stations.count) filtered=\(self.filteredStations.count)")
         } catch {
+            AppLog.search.error("search failed: \(error.localizedDescription, privacy: .public)")
             self.error = error.localizedDescription
             stations = []
         }
@@ -218,10 +273,16 @@ final class SearchViewModel {
             points: sampledPoints,
             fuelIds: [selectedFuel.rawValue]
         )
+        AppLog.search.debug("searchRoute API rawStations=\(rawStations.count) samplePoints=\(sampledPoints.count)")
 
         let fuelIds = [selectedFuel.rawValue]
         let mapped: [StationWithMetrics] = rawStations.compactMap { station in
             enrichStation(station, fuelIds: fuelIds, polyline: route.coordinates, maxDistance: 5000)
+        }
+        if rawStations.isEmpty {
+            AppLog.search.warning("searchRoute: 0 stations renvoyées par l’API sur le trajet")
+        } else if mapped.isEmpty {
+            logSampleStationFuels(rawStations.first, label: "searchRoute enrich a tout filtré")
         }
         let sorted = mapped.sorted { $0.bestPrice < $1.bestPrice }
         let enriched = rankStations(sorted)
@@ -234,7 +295,9 @@ final class SearchViewModel {
     @MainActor
     private func searchAround() async throws {
         let trimmed = addressQuery.trimmingCharacters(in: .whitespaces)
+        AppLog.search.debug("searchAround geocode query='\(trimmed, privacy: .public)'")
         let point = try await geocode(trimmed)
+        AppLog.search.debug("searchAround coord lat=\(point.lat) lon=\(point.lon)")
         startPoint = point
         endPoint = nil
         routeResult = nil
@@ -243,10 +306,16 @@ final class SearchViewModel {
             points: [point],
             fuelIds: [selectedFuel.rawValue]
         )
+        AppLog.search.debug("searchAround API rawStations=\(rawStations.count)")
 
         let fuelIds = [selectedFuel.rawValue]
         let mapped: [StationWithMetrics] = rawStations.compactMap { station in
             enrichStation(station, fuelIds: fuelIds, referencePoint: point)
+        }
+        if rawStations.isEmpty {
+            AppLog.search.warning("searchAround: 0 stations dans le rayon API (point=\(point.lat),\(point.lon))")
+        } else if mapped.isEmpty {
+            logSampleStationFuels(rawStations.first, label: "searchAround enrich a tout filtré (prix/carburant ?)")
         }
         let sorted = mapped.sorted { $0.bestPrice < $1.bestPrice }
         let enriched = rankStations(sorted)
@@ -256,7 +325,14 @@ final class SearchViewModel {
         saveSearch(label: trimmed, address: trimmed)
     }
 
+    private var geocodeCache: [String: Coordinate] = [:]
+
     private func geocode(_ query: String) async throws -> Coordinate {
+        let normalized = query.lowercased().trimmingCharacters(in: .whitespaces)
+        if let cached = geocodeCache[normalized] {
+            return cached
+        }
+
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = query
         request.region = MKCoordinateRegion(
@@ -267,12 +343,15 @@ final class SearchViewModel {
         let search = MKLocalSearch(request: request)
         let response = try await search.start()
         guard let item = response.mapItems.first else {
+            AppLog.search.error("geocode aucun résultat pour query='\(query, privacy: .public)'")
             throw GeocodingError.notFound
         }
-        return Coordinate(
+        let coord = Coordinate(
             lat: item.placemark.coordinate.latitude,
             lon: item.placemark.coordinate.longitude
         )
+        geocodeCache[normalized] = coord
+        return coord
     }
 
     private func enrichStation(
@@ -343,5 +422,13 @@ final class SearchViewModel {
     enum GeocodingError: LocalizedError {
         case notFound
         var errorDescription: String? { "Adresse introuvable." }
+    }
+
+    private func logSampleStationFuels(_ station: Station?, label: String) {
+        guard let station else { return }
+        let summary = station.fuels.map { f in
+            "\(f.id):\(f.shortName) avail=\(f.available) price=\(f.price.map { String($0) } ?? "nil")"
+        }.joined(separator: "; ")
+        AppLog.search.warning("\(label) stationId=\(station.id) fuels=[\(summary, privacy: .public)]")
     }
 }

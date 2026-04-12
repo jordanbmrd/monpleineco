@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - Toggle Chip (shared component used by RouteSearchView)
+// MARK: - Toggle Chip
 
 struct ToggleChip: View {
     let label: String

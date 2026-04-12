@@ -6,6 +6,8 @@ struct StationDetailView: View {
 
     @State private var lookAroundScene: MKLookAroundScene?
 
+    private var favoritesManager: FavoritesManager { FavoritesManager.shared }
+
     private var sortedFuels: [StationFuel] {
         let order = FuelType.detailSortOrder.map(\.rawValue)
         return station.station.fuels.sorted { a, b in
@@ -16,13 +18,6 @@ struct StationDetailView: View {
             let bIdx = order.firstIndex(of: b.id) ?? 99
             return aIdx < bIdx
         }
-    }
-
-    private var cheapestFuelId: Int? {
-        sortedFuels
-            .filter { $0.available && $0.price != nil }
-            .min(by: { ($0.price ?? .infinity) < ($1.price ?? .infinity) })
-            .map(\.id)
     }
 
     private var availableCount: Int {
@@ -217,16 +212,31 @@ struct StationDetailView: View {
     // MARK: - Navigate Button
 
     private var navigateButton: some View {
-        Button {
-            openNavigation()
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
-                    .font(.subheadline.weight(.semibold))
-                Text("Ouvrir dans Plans")
+        HStack(spacing: 10) {
+            Button {
+                openNavigation()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Ouvrir dans Plans")
+                }
+            }
+            .buttonStyle(GradientButtonStyle())
+
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    favoritesManager.toggle(station.station)
+                }
+            } label: {
+                Image(systemName: favoritesManager.isFavorite(station.station.id) ? "star.fill" : "star")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(favoritesManager.isFavorite(station.station.id) ? .yellow : .brand)
+                    .frame(width: 50, height: 50)
+                    .background(Color.brand.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
         }
-        .buttonStyle(GradientButtonStyle())
     }
 
     // MARK: - Fuels Section
@@ -252,10 +262,7 @@ struct StationDetailView: View {
             } else {
                 VStack(spacing: 8) {
                     ForEach(sortedFuels) { fuel in
-                        FuelRowView(
-                            fuel: fuel,
-                            isBest: fuel.id == cheapestFuelId && fuel.available && fuel.price != nil
-                        )
+                        FuelRowView(fuel: fuel)
                     }
                 }
             }

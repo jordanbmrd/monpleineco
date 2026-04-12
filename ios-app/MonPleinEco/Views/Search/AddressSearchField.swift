@@ -7,6 +7,8 @@ final class AddressCompleter: NSObject, MKLocalSearchCompleterDelegate {
     var isSearching = false
 
     private let completer = MKLocalSearchCompleter()
+    private var debounceWorkItem: DispatchWorkItem?
+    private static let debounceInterval: TimeInterval = 0.25
 
     override init() {
         super.init()
@@ -20,22 +22,37 @@ final class AddressCompleter: NSObject, MKLocalSearchCompleterDelegate {
     }
 
     func search(_ query: String) {
+        debounceWorkItem?.cancel()
+        debounceWorkItem = nil
+
         guard query.count >= 3 else {
             suggestions = []
+            isSearching = false
             return
         }
-        isSearching = true
-        completer.queryFragment = query
+
+        let trimmed = query
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.isSearching = true
+            self.completer.queryFragment = trimmed
+        }
+        debounceWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.debounceInterval, execute: work)
     }
 
     func clear() {
+        debounceWorkItem?.cancel()
+        debounceWorkItem = nil
+        completer.queryFragment = ""
         suggestions = []
+        isSearching = false
     }
 
     // MARK: - MKLocalSearchCompleterDelegate
 
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
-        suggestions = Array(completer.results.prefix(5))
+        suggestions = Array(completer.results.prefix(Theme.AddressSearch.maxSuggestions))
         isSearching = false
     }
 
@@ -117,8 +134,9 @@ struct AddressSearchField: View {
             )
 
             if isFocused && !completer.suggestions.isEmpty {
+                let displayedSuggestions = Array(completer.suggestions.prefix(Theme.AddressSearch.maxSuggestions))
                 VStack(spacing: 0) {
-                    ForEach(completer.suggestions, id: \.self) { suggestion in
+                    ForEach(displayedSuggestions, id: \.self) { suggestion in
                         Button {
                             let label = [suggestion.title, suggestion.subtitle]
                                 .filter { !$0.isEmpty }
@@ -151,7 +169,7 @@ struct AddressSearchField: View {
                         }
                         .buttonStyle(.plain)
 
-                        if suggestion != completer.suggestions.last {
+                        if suggestion != displayedSuggestions.last {
                             Divider().padding(.leading, 40)
                         }
                     }

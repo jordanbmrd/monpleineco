@@ -6,18 +6,69 @@ struct StationCarouselCard: View {
 
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 0) {
-                brandHeader
-                cardBody
+            VStack(alignment: .leading, spacing: 10) {
+                // Header: rank badge
+                HStack(alignment: .center) {
+                    if station.rank <= 3 {
+                        Text(rankLabel)
+                            .font(.caption2.weight(.heavy))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(rankColor, in: Capsule())
+                    } else {
+                        Text("#\(station.rank)")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+
+                // Station name + brand
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(station.station.name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Text(station.station.brand ?? "Indépendant")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Divider().opacity(0.5)
+
+                // Price + distance
+                HStack(alignment: .firstTextBaseline) {
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text(FormattingUtils.formatPrice(station.bestPrice))
+                            .font(.system(.callout, design: .rounded, weight: .heavy))
+                            .foregroundStyle(.brand)
+                            .monospacedDigit()
+                        Text("€/L")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Label(FormattingUtils.formatDistance(station.distanceToRoute), systemImage: "location.fill")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
-            .frame(width: Theme.Spacing.carouselCardWidth)
-            .background(Color(.systemBackground))
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                RoundedRectangle(cornerRadius: Theme.Radius.carouselCard, style: .continuous)
+                    .fill(Color(.systemBackground))
+            }
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.carouselCard, style: .continuous))
-            .shadow(
-                color: Theme.Shadow.floatingCard.color,
-                radius: Theme.Shadow.floatingCard.radius,
-                y: Theme.Shadow.floatingCard.y
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.carouselCard, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.1), lineWidth: 1)
             )
+            .shadow(color: .black.opacity(0.18), radius: 16, x: 0, y: 6)
+            .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
         }
         .buttonStyle(CardPressStyle())
         .accessibilityElement(children: .combine)
@@ -25,71 +76,11 @@ struct StationCarouselCard: View {
         .accessibilityAddTraits(.isButton)
     }
 
-    private var brandHeader: some View {
-        ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: [Color.brand.opacity(0.15), Color.brandLight.opacity(0.6)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .frame(height: 80)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Image(systemName: "fuelpump.fill")
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(.brand)
-
-                if station.rank <= 3 {
-                    Text(rankLabel)
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(rankColor, in: Capsule())
-                }
-            }
-            .padding(12)
-        }
-    }
-
-    private var cardBody: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(station.station.name)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-
-            Text(station.station.brand ?? "Indépendant")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-
-            Spacer(minLength: 4)
-
-            HStack(alignment: .firstTextBaseline, spacing: 2) {
-                Text(FormattingUtils.formatPrice(station.bestPrice))
-                    .font(.system(.title3, design: .rounded, weight: .heavy))
-                    .foregroundStyle(.brand)
-                    .monospacedDigit()
-                Text("€/L")
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.secondary)
-            }
-
-            HStack(spacing: 10) {
-                Label(FormattingUtils.formatDistance(station.distanceToRoute), systemImage: "location.fill")
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(12)
-    }
-
     private var rankLabel: String {
         switch station.rank {
-        case 1: "#1"
-        case 2: "#2"
-        case 3: "#3"
+        case 1: "🥇 #1"
+        case 2: "🥈 #2"
+        case 3: "🥉 #3"
         default: "#\(station.rank)"
         }
     }

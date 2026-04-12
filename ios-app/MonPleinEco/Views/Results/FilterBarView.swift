@@ -4,9 +4,16 @@ struct FilterBarView: View {
     @Binding var sortBy: SortOption
     @Binding var selectedBrand: String
     let availableBrands: [String]
+    /// Petit loader à gauche des menus (ex. chargement des stations).
+    var isLoading: Bool = false
 
     var body: some View {
         HStack(spacing: 8) {
+            if isLoading {
+                ProgressView()
+                    .scaleEffect(0.72)
+                    .frame(width: 22, height: 22)
+            }
             Menu {
                 ForEach(SortOption.allCases, id: \.self) { option in
                     Button {

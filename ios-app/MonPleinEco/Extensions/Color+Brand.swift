@@ -41,6 +41,11 @@ enum Theme {
         static let carouselCard: CGFloat = 16
     }
 
+    enum AddressSearch {
+        /// Nombre max de propositions d’adresse (Accueil + page Trajet).
+        static let maxSuggestions = 4
+    }
+
     enum Spacing {
         static let cardPadding: CGFloat = 14
         static let heroCardPadding: CGFloat = 18

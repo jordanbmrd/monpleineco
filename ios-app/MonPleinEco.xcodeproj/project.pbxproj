@@ -1,0 +1,499 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		038DBB4FD9624CBD322E6899 /* FuelChipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7336CEC5E9C1D2F932DF770C /* FuelChipView.swift */; };
+		0E7335703912BE2319CF7C8A /* Color+Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81EF59B007D37162B1A6D7B /* Color+Brand.swift */; };
+		13942D6E8F180AE5EADFF30C /* RouteSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B23ACE57DA6055CC57F22E7 /* RouteSearchView.swift */; };
+		243F6DF64AAE869CAC55B317 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C840E2185E749E35B0A36987 /* SearchViewModel.swift */; };
+		26160D28207A63E98086DE33 /* StationDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3EBA4AA86E6BB6C3EA7A3C3 /* StationDetailView.swift */; };
+		338ED5906072B0E1967FB0DC /* SearchHistoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5839B1812E5DCF70009F4A4 /* SearchHistoryManager.swift */; };
+		35BB4EA48B48524BC4D91DB2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31D64402C46877DABF6F7E85 /* ContentView.swift */; };
+		372D02E098F94C34DFE3F4C6 /* FilterBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E7720D23A1B20149672E11 /* FilterBarView.swift */; };
+		39C8DED71967F4EA6C821CEF /* Station.swift in Sources */ = {isa = PBXBuildFile; fileRef = E92D6D206BCEAA56DA6CEE3C /* Station.swift */; };
+		634ECB24937A68D247E852EC /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DC534EB66F7A2F09B781B81 /* ProfileView.swift */; };
+		6A9F8228913B57EEC329235B /* RecentSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E76C2A6F4DF2BD648609307 /* RecentSearch.swift */; };
+		84FCB20BB112E882C4FB6D3B /* StationCarouselCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CDE38F58B88823BEE4A755 /* StationCarouselCard.swift */; };
+		85C60A886EB4E49CA5898990 /* FuelRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35BE7BF79A73F6E0A2F43059 /* FuelRowView.swift */; };
+		874B254FAC60667C8FDE97F1 /* GeoUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCE9522F24603944600106CB /* GeoUtils.swift */; };
+		87DCED93EA3018CE20DCED0B /* MonPleinEcoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A195C3B0F4B40E5D0478D71 /* MonPleinEcoApp.swift */; };
+		8A3ABB8987E02D4BCDEC719E /* FavoritesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BE44D7A1116365BB64F1DE5 /* FavoritesView.swift */; };
+		9B51B9BDC2F61C3AA954F61C /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85561F596739E531B012731A /* LocationManager.swift */; };
+		9C4F17FF445B8DD9A2655BB4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8A484DD6C939E75AC8FE6952 /* Assets.xcassets */; };
+		A00FBF1800A2DBB06358D9E3 /* SearchOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17915ACB854A6CE1E6FED651 /* SearchOverlayView.swift */; };
+		AD33EC270D63C454607E3094 /* RoutingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8C443AEAD8F6DF7EF8D082 /* RoutingService.swift */; };
+		B771900A200C979E7DE5E29E /* FuelType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07BF21151E85B0D1F9DA073C /* FuelType.swift */; };
+		C914E43ECDCF5C3E021F162E /* HomeMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 805E90E2C98F678D1F14663D /* HomeMapView.swift */; };
+		DA43C790E5D71B767D7769A8 /* SearchFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F865E8D0E3FA174CD3154C3 /* SearchFormView.swift */; };
+		EA7CA07B939E3D419DB547CC /* AddressSearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2BF19B5127C7EAF1BDBABE7 /* AddressSearchField.swift */; };
+		EFBDDDEC0754EFE042FD95F6 /* StationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45228B47188CDB99BF94287A /* StationService.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		07BF21151E85B0D1F9DA073C /* FuelType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelType.swift; sourceTree = "<group>"; };
+		0A8C443AEAD8F6DF7EF8D082 /* RoutingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutingService.swift; sourceTree = "<group>"; };
+		17915ACB854A6CE1E6FED651 /* SearchOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchOverlayView.swift; sourceTree = "<group>"; };
+		2DC534EB66F7A2F09B781B81 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		31D64402C46877DABF6F7E85 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		35BE7BF79A73F6E0A2F43059 /* FuelRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelRowView.swift; sourceTree = "<group>"; };
+		45228B47188CDB99BF94287A /* StationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationService.swift; sourceTree = "<group>"; };
+		5F865E8D0E3FA174CD3154C3 /* SearchFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchFormView.swift; sourceTree = "<group>"; };
+		7336CEC5E9C1D2F932DF770C /* FuelChipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelChipView.swift; sourceTree = "<group>"; };
+		758D1E5A62FD7EE5B9D640C5 /* MonPleinEco.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MonPleinEco.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A195C3B0F4B40E5D0478D71 /* MonPleinEcoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonPleinEcoApp.swift; sourceTree = "<group>"; };
+		7B23ACE57DA6055CC57F22E7 /* RouteSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteSearchView.swift; sourceTree = "<group>"; };
+		805E90E2C98F678D1F14663D /* HomeMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeMapView.swift; sourceTree = "<group>"; };
+		85561F596739E531B012731A /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		88B5B56CB6F8113EC0D71D02 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8A484DD6C939E75AC8FE6952 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		8E76C2A6F4DF2BD648609307 /* RecentSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentSearch.swift; sourceTree = "<group>"; };
+		9BE44D7A1116365BB64F1DE5 /* FavoritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesView.swift; sourceTree = "<group>"; };
+		B1E7720D23A1B20149672E11 /* FilterBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterBarView.swift; sourceTree = "<group>"; };
+		B3EBA4AA86E6BB6C3EA7A3C3 /* StationDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationDetailView.swift; sourceTree = "<group>"; };
+		B81EF59B007D37162B1A6D7B /* Color+Brand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Brand.swift"; sourceTree = "<group>"; };
+		C840E2185E749E35B0A36987 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
+		D2BF19B5127C7EAF1BDBABE7 /* AddressSearchField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressSearchField.swift; sourceTree = "<group>"; };
+		DCE9522F24603944600106CB /* GeoUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoUtils.swift; sourceTree = "<group>"; };
+		E1CDE38F58B88823BEE4A755 /* StationCarouselCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationCarouselCard.swift; sourceTree = "<group>"; };
+		E92D6D206BCEAA56DA6CEE3C /* Station.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Station.swift; sourceTree = "<group>"; };
+		F5839B1812E5DCF70009F4A4 /* SearchHistoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchHistoryManager.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		1EB30567E174A3F8DE0133C2 /* Tabs */ = {
+			isa = PBXGroup;
+			children = (
+				9BE44D7A1116365BB64F1DE5 /* FavoritesView.swift */,
+				2DC534EB66F7A2F09B781B81 /* ProfileView.swift */,
+			);
+			path = Tabs;
+			sourceTree = "<group>";
+		};
+		53047A53BE34EFD274077E2A /* App */ = {
+			isa = PBXGroup;
+			children = (
+				7A195C3B0F4B40E5D0478D71 /* MonPleinEcoApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		5D5F5641FD39BE5757FF3C5C = {
+			isa = PBXGroup;
+			children = (
+				66A954CA371BC59E528CF13D /* MonPleinEco */,
+				89D52EF6AB6F92F2F0DB8C7C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		6501276FF5185DE5D5A2F77D /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				805E90E2C98F678D1F14663D /* HomeMapView.swift */,
+				17915ACB854A6CE1E6FED651 /* SearchOverlayView.swift */,
+				E1CDE38F58B88823BEE4A755 /* StationCarouselCard.swift */,
+			);
+			path = Home;
+			sourceTree = "<group>";
+		};
+		66A954CA371BC59E528CF13D /* MonPleinEco */ = {
+			isa = PBXGroup;
+			children = (
+				8A484DD6C939E75AC8FE6952 /* Assets.xcassets */,
+				88B5B56CB6F8113EC0D71D02 /* Info.plist */,
+				53047A53BE34EFD274077E2A /* App */,
+				C3646AC746EE8522A0032AB6 /* Extensions */,
+				8E905113B477223583EB49EA /* Models */,
+				841EB71E9ED7B705C6EB2607 /* Services */,
+				839F77BE02689447811AD87A /* ViewModels */,
+				B424E72126FBF96A124B9A13 /* Views */,
+			);
+			path = MonPleinEco;
+			sourceTree = "<group>";
+		};
+		839F77BE02689447811AD87A /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				C840E2185E749E35B0A36987 /* SearchViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		841EB71E9ED7B705C6EB2607 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				DCE9522F24603944600106CB /* GeoUtils.swift */,
+				85561F596739E531B012731A /* LocationManager.swift */,
+				0A8C443AEAD8F6DF7EF8D082 /* RoutingService.swift */,
+				F5839B1812E5DCF70009F4A4 /* SearchHistoryManager.swift */,
+				45228B47188CDB99BF94287A /* StationService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		863240A8C74A1CD11F58FE8B /* Results */ = {
+			isa = PBXGroup;
+			children = (
+				B1E7720D23A1B20149672E11 /* FilterBarView.swift */,
+			);
+			path = Results;
+			sourceTree = "<group>";
+		};
+		8948D58E74DEE334A3AE0B72 /* Search */ = {
+			isa = PBXGroup;
+			children = (
+				D2BF19B5127C7EAF1BDBABE7 /* AddressSearchField.swift */,
+				7336CEC5E9C1D2F932DF770C /* FuelChipView.swift */,
+				5F865E8D0E3FA174CD3154C3 /* SearchFormView.swift */,
+			);
+			path = Search;
+			sourceTree = "<group>";
+		};
+		89D52EF6AB6F92F2F0DB8C7C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				758D1E5A62FD7EE5B9D640C5 /* MonPleinEco.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		8E905113B477223583EB49EA /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				07BF21151E85B0D1F9DA073C /* FuelType.swift */,
+				8E76C2A6F4DF2BD648609307 /* RecentSearch.swift */,
+				E92D6D206BCEAA56DA6CEE3C /* Station.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		B424E72126FBF96A124B9A13 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				31D64402C46877DABF6F7E85 /* ContentView.swift */,
+				FE1DBC6D0AB48C79AF21A913 /* Detail */,
+				6501276FF5185DE5D5A2F77D /* Home */,
+				863240A8C74A1CD11F58FE8B /* Results */,
+				DE9D60F74317FE1E5A61D7D8 /* Route */,
+				8948D58E74DEE334A3AE0B72 /* Search */,
+				1EB30567E174A3F8DE0133C2 /* Tabs */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		C3646AC746EE8522A0032AB6 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				B81EF59B007D37162B1A6D7B /* Color+Brand.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		DE9D60F74317FE1E5A61D7D8 /* Route */ = {
+			isa = PBXGroup;
+			children = (
+				7B23ACE57DA6055CC57F22E7 /* RouteSearchView.swift */,
+			);
+			path = Route;
+			sourceTree = "<group>";
+		};
+		FE1DBC6D0AB48C79AF21A913 /* Detail */ = {
+			isa = PBXGroup;
+			children = (
+				35BE7BF79A73F6E0A2F43059 /* FuelRowView.swift */,
+				B3EBA4AA86E6BB6C3EA7A3C3 /* StationDetailView.swift */,
+			);
+			path = Detail;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		67B5184B8AF104F164770A93 /* MonPleinEco */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 43A519EBE0414EBA3E36DFA4 /* Build configuration list for PBXNativeTarget "MonPleinEco" */;
+			buildPhases = (
+				681D8D81818F0E29155820AD /* Sources */,
+				F3678EC5147430F94A605880 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MonPleinEco;
+			packageProductDependencies = (
+			);
+			productName = MonPleinEco;
+			productReference = 758D1E5A62FD7EE5B9D640C5 /* MonPleinEco.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E3C5F4632DFCCD8E62CDE292 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+			};
+			buildConfigurationList = 8109A7DBE5C72E82A8E89EA1 /* Build configuration list for PBXProject "MonPleinEco" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 5D5F5641FD39BE5757FF3C5C;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 89D52EF6AB6F92F2F0DB8C7C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				67B5184B8AF104F164770A93 /* MonPleinEco */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F3678EC5147430F94A605880 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9C4F17FF445B8DD9A2655BB4 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		681D8D81818F0E29155820AD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EA7CA07B939E3D419DB547CC /* AddressSearchField.swift in Sources */,
+				0E7335703912BE2319CF7C8A /* Color+Brand.swift in Sources */,
+				35BB4EA48B48524BC4D91DB2 /* ContentView.swift in Sources */,
+				8A3ABB8987E02D4BCDEC719E /* FavoritesView.swift in Sources */,
+				372D02E098F94C34DFE3F4C6 /* FilterBarView.swift in Sources */,
+				038DBB4FD9624CBD322E6899 /* FuelChipView.swift in Sources */,
+				85C60A886EB4E49CA5898990 /* FuelRowView.swift in Sources */,
+				B771900A200C979E7DE5E29E /* FuelType.swift in Sources */,
+				874B254FAC60667C8FDE97F1 /* GeoUtils.swift in Sources */,
+				C914E43ECDCF5C3E021F162E /* HomeMapView.swift in Sources */,
+				9B51B9BDC2F61C3AA954F61C /* LocationManager.swift in Sources */,
+				87DCED93EA3018CE20DCED0B /* MonPleinEcoApp.swift in Sources */,
+				634ECB24937A68D247E852EC /* ProfileView.swift in Sources */,
+				6A9F8228913B57EEC329235B /* RecentSearch.swift in Sources */,
+				13942D6E8F180AE5EADFF30C /* RouteSearchView.swift in Sources */,
+				AD33EC270D63C454607E3094 /* RoutingService.swift in Sources */,
+				DA43C790E5D71B767D7769A8 /* SearchFormView.swift in Sources */,
+				338ED5906072B0E1967FB0DC /* SearchHistoryManager.swift in Sources */,
+				A00FBF1800A2DBB06358D9E3 /* SearchOverlayView.swift in Sources */,
+				243F6DF64AAE869CAC55B317 /* SearchViewModel.swift in Sources */,
+				39C8DED71967F4EA6C821CEF /* Station.swift in Sources */,
+				84FCB20BB112E882C4FB6D3B /* StationCarouselCard.swift in Sources */,
+				26160D28207A63E98086DE33 /* StationDetailView.swift in Sources */,
+				EFBDDDEC0754EFE042FD95F6 /* StationService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		180DB1655FC149F39BD6D35C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 65D3N4Z35P;
+				INFOPLIST_FILE = MonPleinEco/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = fr.monpleineco.app;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		2B5F5C456F955778E2A0156A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 65D3N4Z35P;
+				INFOPLIST_FILE = MonPleinEco/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = fr.monpleineco.app;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		5442A80BCEF21964AC3BE791 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MonPleinEco/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.10;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D6754CBB18FF3937E42C67D7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MonPleinEco/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.10;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		43A519EBE0414EBA3E36DFA4 /* Build configuration list for PBXNativeTarget "MonPleinEco" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2B5F5C456F955778E2A0156A /* Debug */,
+				180DB1655FC149F39BD6D35C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8109A7DBE5C72E82A8E89EA1 /* Build configuration list for PBXProject "MonPleinEco" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5442A80BCEF21964AC3BE791 /* Debug */,
+				D6754CBB18FF3937E42C67D7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = E3C5F4632DFCCD8E62CDE292 /* Project object */;
+}

@@ -39,26 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
-# capacitor - generated files (régénérés par npx cap sync)
-android/app/src/main/assets/capacitor.config.json
-android/app/src/main/assets/capacitor.plugins.json
-android/app/src/main/assets/public/
-android/app/capacitor.build.gradle
-android/capacitor.settings.gradle
-android/capacitor-cordova-android-plugins/
-ios/App/App/capacitor.config.json
-ios/App/capacitor.config.json
-ios/App/public/
-
-# capacitor - build outputs
-android/app/build/
-android/.gradle/
-android/.idea/
-android/local.properties
-ios/App/build/
-ios/App/Pods/
-ios/App/App.xcworkspace/xcuserdata/
 next-env.d.ts
+
+# Native iOS app (Xcode / Swift)
+ios-app/**/xcuserdata/
+ios-app/**/*.xcuserstate
+ios-app/**/.swiftpm/
+ios-app/**/DerivedData/
+ios-app/**/build/
+ios-app/**/*.ipa
+ios-app/**/*.dSYM.zip
+ios-app/**/Pods/
 
 # others
 .npmrc

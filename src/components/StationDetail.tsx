@@ -120,11 +120,11 @@ const StationDetail = ({ station, onBack }: StationDetailProps) => {
 
     const formattedDate = lastUpdated
         ? new Intl.DateTimeFormat("fr-FR", {
-              day: "numeric",
-              month: "long",
-              hour: "2-digit",
-              minute: "2-digit",
-          }).format(new Date(lastUpdated))
+            day: "numeric",
+            month: "long",
+            hour: "2-digit",
+            minute: "2-digit",
+        }).format(new Date(lastUpdated))
         : null;
 
     return (

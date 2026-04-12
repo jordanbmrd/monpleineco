@@ -75,6 +75,7 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
@@ -757,14 +758,12 @@ body {
 .skeleton {
   height: 100px;
   border-radius: 20px;
-  background: linear-gradient(
-    90deg,
-    var(--surface) 0%,
-    #f1f5f9 40%,
-    #e8edf2 50%,
-    #f1f5f9 60%,
-    var(--surface) 100%
-  );
+  background: linear-gradient(90deg,
+      var(--surface) 0%,
+      #f1f5f9 40%,
+      #e8edf2 50%,
+      #f1f5f9 60%,
+      var(--surface) 100%);
   background-size: 300% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
 }
@@ -773,6 +772,7 @@ body {
   0% {
     background-position: 150% 0;
   }
+
   100% {
     background-position: -150% 0;
   }

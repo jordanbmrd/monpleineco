@@ -34,6 +34,7 @@
 		DA43C790E5D71B767D7769A8 /* SearchFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F865E8D0E3FA174CD3154C3 /* SearchFormView.swift */; };
 		EA7CA07B939E3D419DB547CC /* AddressSearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2BF19B5127C7EAF1BDBABE7 /* AddressSearchField.swift */; };
 		EFBDDDEC0754EFE042FD95F6 /* StationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45228B47188CDB99BF94287A /* StationService.swift */; };
+		F1A2B3C4D5E6F7081234ABCD /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718ABCD1234 /* OnboardingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -64,6 +65,7 @@
 		DCE9522F24603944600106CB /* GeoUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoUtils.swift; sourceTree = "<group>"; };
 		E1CDE38F58B88823BEE4A755 /* StationCarouselCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationCarouselCard.swift; sourceTree = "<group>"; };
 		E92D6D206BCEAA56DA6CEE3C /* Station.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Station.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718ABCD1234 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		F5839B1812E5DCF70009F4A4 /* SearchHistoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchHistoryManager.swift; sourceTree = "<group>"; };
 		F9C058CA5F686C07E85FDBBC /* AppLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLog.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -183,12 +185,21 @@
 				31D64402C46877DABF6F7E85 /* ContentView.swift */,
 				FE1DBC6D0AB48C79AF21A913 /* Detail */,
 				6501276FF5185DE5D5A2F77D /* Home */,
+				AABB1122334455667788CCDD /* Onboarding */,
 				863240A8C74A1CD11F58FE8B /* Results */,
 				DE9D60F74317FE1E5A61D7D8 /* Route */,
 				8948D58E74DEE334A3AE0B72 /* Search */,
 				1EB30567E174A3F8DE0133C2 /* Tabs */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		AABB1122334455667788CCDD /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60718ABCD1234 /* OnboardingView.swift */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		C3646AC746EE8522A0032AB6 /* Extensions */ = {
@@ -294,6 +305,7 @@
 				C914E43ECDCF5C3E021F162E /* HomeMapView.swift in Sources */,
 				9B51B9BDC2F61C3AA954F61C /* LocationManager.swift in Sources */,
 				87DCED93EA3018CE20DCED0B /* MonPleinEcoApp.swift in Sources */,
+				F1A2B3C4D5E6F7081234ABCD /* OnboardingView.swift in Sources */,
 				634ECB24937A68D247E852EC /* ProfileView.swift in Sources */,
 				6A9F8228913B57EEC329235B /* RecentSearch.swift in Sources */,
 				AD33EC270D63C454607E3094 /* RoutingService.swift in Sources */,

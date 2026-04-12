@@ -4,6 +4,7 @@ import MapKit
 struct StationDetailView: View {
     let station: StationWithMetrics
 
+    @AppStorage("tankSize") private var tankSize = 50
     @State private var lookAroundScene: MKLookAroundScene?
 
     private var favoritesManager: FavoritesManager { FavoritesManager.shared }
@@ -111,7 +112,7 @@ struct StationDetailView: View {
                         .foregroundStyle(.white)
                 }
                 Spacer()
-                if station.rank <= 3 {
+                if (1...3).contains(station.rank) {
                     Text("#\(station.rank)")
                         .font(.system(.subheadline, design: .rounded, weight: .heavy))
                         .foregroundStyle(.white)
@@ -134,12 +135,12 @@ struct StationDetailView: View {
                         .foregroundStyle(.white.opacity(0.5))
                 }
                 Spacer()
-                let total = station.bestPrice * 50
+                let total = station.bestPrice * Double(tankSize)
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(String(format: "%.2f", total)) €")
                         .font(.system(.title3, design: .rounded, weight: .heavy))
                         .foregroundStyle(.white)
-                    Text("pour 50 litres")
+                    Text("plein (\(tankSize) L)")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.white.opacity(0.5))
                 }

@@ -2,8 +2,10 @@ import SwiftUI
 
 struct ProfileView: View {
     @AppStorage("defaultFuelRawValue") private var defaultFuelRawValue = FuelType.sp95E10.rawValue
+    @AppStorage("tankSize") private var tankSize = 50
     @State private var showAbout = false
     @State private var showFuelPicker = false
+    @State private var showTankPicker = false
     @State private var showTerms = false
     @State private var showPrivacy = false
 
@@ -23,6 +25,16 @@ struct ProfileView: View {
                                 icon: "fuelpump.fill",
                                 label: "Carburant par défaut",
                                 trailing: defaultFuel.label,
+                                showChevron: true
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        Divider().padding(.leading, 48)
+                        Button { showTankPicker = true } label: {
+                            settingsRow(
+                                icon: "drop.fill",
+                                label: "Taille du réservoir",
+                                trailing: "\(tankSize) L",
                                 showChevron: true
                             )
                         }
@@ -60,6 +72,9 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showFuelPicker) {
                 fuelPickerSheet
+            }
+            .sheet(isPresented: $showTankPicker) {
+                TankPickerSheet(isPresented: $showTankPicker)
             }
         }
     }
@@ -412,6 +427,80 @@ private struct FuelPickerSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Fermer") { isPresented = false }
                 }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+}
+
+// MARK: - Tank Picker
+
+private struct TankPickerSheet: View {
+    @Binding var isPresented: Bool
+    @AppStorage("tankSize") private var tankSize = 50
+    @State private var draft: Double = 50
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 32) {
+                Spacer()
+
+                ZStack {
+                    Circle()
+                        .stroke(Color(.systemGray5), lineWidth: 10)
+                        .frame(width: 150, height: 150)
+
+                    Circle()
+                        .trim(from: 0, to: min(draft / 100, 1))
+                        .stroke(.brandGradient, style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                        .frame(width: 150, height: 150)
+                        .rotationEffect(.degrees(-90))
+                        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: draft)
+
+                    VStack(spacing: 2) {
+                        Text("\(Int(draft))")
+                            .font(.system(size: 40, weight: .heavy, design: .rounded))
+                            .monospacedDigit()
+                            .contentTransition(.numericText())
+                        Text("litres")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                VStack(spacing: 8) {
+                    Slider(value: $draft, in: 20...120, step: 5)
+                        .tint(.brand)
+                        .sensoryFeedback(.selection, trigger: Int(draft))
+
+                    HStack {
+                        Text("20 L")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.tertiary)
+                        Spacer()
+                        Text("120 L")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .padding(.horizontal, 24)
+
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+            .navigationTitle("Taille du réservoir")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("OK") {
+                        tankSize = Int(draft)
+                        isPresented = false
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+            .onAppear {
+                draft = Double(tankSize)
             }
         }
         .presentationDetents([.medium])

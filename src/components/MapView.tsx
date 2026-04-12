@@ -76,7 +76,7 @@ const FitBounds = ({
 
 const MapController = forwardRef<
     MapViewRef,
-    { mapRef: React.MutableRefObject<L.Map | null>; onReady?: (ref: MapViewRef) => void }
+    { mapRef: React.RefObject<L.Map | null>; onReady?: (ref: MapViewRef) => void }
 >(({ mapRef, onReady }, ref) => {
     const map = useMap();
     mapRef.current = map;
@@ -151,8 +151,8 @@ const MapView = ({ route, stations, start, end, onMapReady }: MapViewProps) => {
             className="map-container"
         >
             <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
             />
             <MapController
                 ref={controllerRef}
@@ -165,7 +165,7 @@ const MapView = ({ route, stations, start, end, onMapReady }: MapViewProps) => {
                 }}
             />
             {polyline.length > 0 && (
-                <Polyline positions={polyline} pathOptions={{ color: "#0f172a" }} />
+                <Polyline positions={polyline} pathOptions={{ color: "#16a34a", weight: 4, opacity: 0.85 }} />
             )}
             {start && (
                 <Marker position={[start.lat, start.lon]}>

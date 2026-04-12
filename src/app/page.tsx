@@ -539,21 +539,14 @@ export default function Home() {
 
         {panelMode === "minimized" ? (
           <div className="panel-minimized-strip">
-            <span>Cliquez pour ouvrir les résultats</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+            <span>Voir les résultats</span>
           </div>
         ) : (
         <div className="panel-scroll">
           {viewState === "form" ? (
             /* ── Search form ── */
             <div className="panel-safe-bottom">
-              <div className="panel-header">
-                <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-                  <span className="mr-1">⛽</span> Mon Plein Éco
-                </h1>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Trouvez le carburant le moins cher
-                </p>
-              </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="segmented-control">
@@ -828,7 +821,8 @@ export default function Home() {
                   className="panel-back"
                   onClick={() => setViewState("form")}
                 >
-                  ← Retour
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                  Retour
                 </button>
                 {hasSearched && !loading && (
                   <span className="filter-count">
@@ -842,8 +836,14 @@ export default function Home() {
 
               {route && (
                 <div className="flex gap-2 flex-wrap mb-4">
-                  <span className="route-pill">📏 {formatDistance(route.distance)}</span>
-                  <span className="route-pill">⏱️ {formatDuration(route.duration)}</span>
+                  <span className="route-pill">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="2" y1="12" x2="22" y2="12"/><polyline points="15 5 22 12 15 19"/><polyline points="9 5 2 12 9 19"/></svg>
+                    {formatDistance(route.distance)}
+                  </span>
+                  <span className="route-pill">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    {formatDuration(route.duration)}
+                  </span>
                 </div>
               )}
 

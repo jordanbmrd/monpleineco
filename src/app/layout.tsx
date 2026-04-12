@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     "Trouvez les stations essence les moins chères sur votre trajet.",
   other: {
     "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-status-bar-style": "default",
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
     "mobile-web-app-capable": "yes",
   },
 };

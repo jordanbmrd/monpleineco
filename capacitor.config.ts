@@ -20,10 +20,11 @@ const config: CapacitorConfig = {
     StatusBar: {
       style: "LIGHT",
       backgroundColor: "#16a34a",
+      overlaysWebView: true,
     },
   },
   ios: {
-    contentInset: "automatic",
+    contentInset: "never",
     allowsLinkPreview: false,
   },
   android: {

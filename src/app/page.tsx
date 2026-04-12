@@ -6,6 +6,7 @@ import type { Station } from "@/lib/prixCarburants";
 import type { LatLng } from "@/lib/geo";
 import {
   distancePointToPolylineMeters,
+  haversineMeters,
   sampleRoutePoints,
 } from "@/lib/geo";
 import StationList from "@/components/StationList";
@@ -479,7 +480,7 @@ export default function Home() {
               ...station,
               bestPrice: best.price ?? 0,
               bestFuelLabel: best.shortName,
-              distanceToRoute: 0,
+              distanceToRoute: haversineMeters(point, station.coordinates),
             };
           })
           .filter((station): station is StationWithMetrics => Boolean(station))
@@ -541,388 +542,388 @@ export default function Home() {
 
         {panelMode === "minimized" ? (
           <div className="panel-minimized-strip">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15" /></svg>
             <span>Voir les résultats</span>
           </div>
         ) : (
-        <div className="panel-scroll">
-          {viewState === "form" ? (
-            /* ── Search form ── */
-            <div className="panel-safe-bottom">
+          <div className="panel-scroll">
+            {viewState === "form" ? (
+              /* ── Search form ── */
+              <div className="panel-safe-bottom">
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="segmented-control">
-                  <button
-                    type="button"
-                    onClick={() => setSearchMode("around")}
-                    className={`segment ${searchMode === "around" ? "segment--active" : ""}`}
-                  >
-                    Autour de moi
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSearchMode("route")}
-                    className={`segment ${searchMode === "route" ? "segment--active" : ""}`}
-                  >
-                    Sur un trajet
-                  </button>
-                </div>
-
-                {searchMode === "route" ? (
-                  <>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">
-                        Départ
-                      </label>
-                      <div className="relative">
-                        <input
-                          value={fromQuery}
-                          onChange={(event) => setFromQuery(event.target.value)}
-                          onFocus={() => setShowFromSuggestions(true)}
-                          onBlur={() =>
-                            window.setTimeout(() => setShowFromSuggestions(false), 150)
-                          }
-                          placeholder="Ville ou adresse de départ"
-                          className="search-input"
-                        />
-                        {showFromSuggestions && fromQuery.trim().length >= 3 && (
-                          <div className="autocomplete-panel">
-                            <div className="autocomplete-header">Suggestions</div>
-                            {loadingFromSuggestions ? (
-                              <div className="autocomplete-empty">
-                                Recherche en cours...
-                              </div>
-                            ) : fromSuggestions.length > 0 ? (
-                              <div className="autocomplete-list">
-                                {fromSuggestions.map((suggestion) => (
-                                  <div
-                                    key={suggestion.id}
-                                    className="autocomplete-item"
-                                    onMouseDown={() => {
-                                      setFromQuery(suggestion.label);
-                                      setFromSuggestions([]);
-                                      setShowFromSuggestions(false);
-                                    }}
-                                  >
-                                    {suggestion.label}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="autocomplete-empty">
-                                Aucun résultat trouvé.
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="segmented-control">
                     <button
                       type="button"
-                      onClick={handleSwap}
-                      className="mx-auto flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-500 transition active:scale-95 active:bg-slate-200 touch-manipulation"
-                      aria-label="Inverser départ / arrivée"
+                      onClick={() => setSearchMode("around")}
+                      className={`segment ${searchMode === "around" ? "segment--active" : ""}`}
                     >
-                      ↕
+                      Autour de moi
                     </button>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">
-                        Arrivée
-                      </label>
-                      <div className="relative">
-                        <input
-                          value={toQuery}
-                          onChange={(event) => setToQuery(event.target.value)}
-                          onFocus={() => setShowToSuggestions(true)}
-                          onBlur={() =>
-                            window.setTimeout(() => setShowToSuggestions(false), 150)
-                          }
-                          placeholder="Ville ou adresse d'arrivée"
-                          className="search-input"
-                        />
-                        {showToSuggestions && toQuery.trim().length >= 3 && (
-                          <div className="autocomplete-panel">
-                            <div className="autocomplete-header">Suggestions</div>
-                            {loadingToSuggestions ? (
-                              <div className="autocomplete-empty">
-                                Recherche en cours...
-                              </div>
-                            ) : toSuggestions.length > 0 ? (
-                              <div className="autocomplete-list">
-                                {toSuggestions.map((suggestion) => (
-                                  <div
-                                    key={suggestion.id}
-                                    className="autocomplete-item"
-                                    onMouseDown={() => {
-                                      setToQuery(suggestion.label);
-                                      setToSuggestions([]);
-                                      setShowToSuggestions(false);
-                                    }}
-                                  >
-                                    {suggestion.label}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="autocomplete-empty">
-                                Aucun résultat trouvé.
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="section-label">Options</p>
-                      <div className="flex gap-2">
-                        <label className={`toggle-chip ${avoidTolls ? "toggle-chip--selected" : ""}`}>
-                          <input type="radio" checked={avoidTolls} onChange={() => setAvoidTolls(true)} className="hidden" />
-                          Sans péages
+                    <button
+                      type="button"
+                      onClick={() => setSearchMode("route")}
+                      className={`segment ${searchMode === "route" ? "segment--active" : ""}`}
+                    >
+                      Sur un trajet
+                    </button>
+                  </div>
+
+                  {searchMode === "route" ? (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">
+                          Départ
                         </label>
-                        <label className={`toggle-chip ${!avoidTolls ? "toggle-chip--selected" : ""}`}>
-                          <input type="radio" checked={!avoidTolls} onChange={() => setAvoidTolls(false)} className="hidden" />
-                          Avec péages
-                        </label>
+                        <div className="relative">
+                          <input
+                            value={fromQuery}
+                            onChange={(event) => setFromQuery(event.target.value)}
+                            onFocus={() => setShowFromSuggestions(true)}
+                            onBlur={() =>
+                              window.setTimeout(() => setShowFromSuggestions(false), 150)
+                            }
+                            placeholder="Ville ou adresse de départ"
+                            className="search-input"
+                          />
+                          {showFromSuggestions && fromQuery.trim().length >= 3 && (
+                            <div className="autocomplete-panel">
+                              <div className="autocomplete-header">Suggestions</div>
+                              {loadingFromSuggestions ? (
+                                <div className="autocomplete-empty">
+                                  Recherche en cours...
+                                </div>
+                              ) : fromSuggestions.length > 0 ? (
+                                <div className="autocomplete-list">
+                                  {fromSuggestions.map((suggestion) => (
+                                    <div
+                                      key={suggestion.id}
+                                      className="autocomplete-item"
+                                      onMouseDown={() => {
+                                        setFromQuery(suggestion.label);
+                                        setFromSuggestions([]);
+                                        setShowFromSuggestions(false);
+                                      }}
+                                    >
+                                      {suggestion.label}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="autocomplete-empty">
+                                  Aucun résultat trouvé.
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    {recentSearches.filter((s) => s.mode === "route").length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleSwap}
+                        className="mx-auto flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-500 transition active:scale-95 active:bg-slate-200 touch-manipulation"
+                        aria-label="Inverser départ / arrivée"
+                      >
+                        ↕
+                      </button>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">
+                          Arrivée
+                        </label>
+                        <div className="relative">
+                          <input
+                            value={toQuery}
+                            onChange={(event) => setToQuery(event.target.value)}
+                            onFocus={() => setShowToSuggestions(true)}
+                            onBlur={() =>
+                              window.setTimeout(() => setShowToSuggestions(false), 150)
+                            }
+                            placeholder="Ville ou adresse d'arrivée"
+                            className="search-input"
+                          />
+                          {showToSuggestions && toQuery.trim().length >= 3 && (
+                            <div className="autocomplete-panel">
+                              <div className="autocomplete-header">Suggestions</div>
+                              {loadingToSuggestions ? (
+                                <div className="autocomplete-empty">
+                                  Recherche en cours...
+                                </div>
+                              ) : toSuggestions.length > 0 ? (
+                                <div className="autocomplete-list">
+                                  {toSuggestions.map((suggestion) => (
+                                    <div
+                                      key={suggestion.id}
+                                      className="autocomplete-item"
+                                      onMouseDown={() => {
+                                        setToQuery(suggestion.label);
+                                        setToSuggestions([]);
+                                        setShowToSuggestions(false);
+                                      }}
+                                    >
+                                      {suggestion.label}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="autocomplete-empty">
+                                  Aucun résultat trouvé.
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                       <div>
-                        <p className="section-label">Recherches récentes</p>
-                        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                          {recentSearches.filter((s) => s.mode === "route").map((recent) => (
+                        <p className="section-label">Options</p>
+                        <div className="flex gap-2">
+                          <label className={`toggle-chip ${avoidTolls ? "toggle-chip--selected" : ""}`}>
+                            <input type="radio" checked={avoidTolls} onChange={() => setAvoidTolls(true)} className="hidden" />
+                            Sans péages
+                          </label>
+                          <label className={`toggle-chip ${!avoidTolls ? "toggle-chip--selected" : ""}`}>
+                            <input type="radio" checked={!avoidTolls} onChange={() => setAvoidTolls(false)} className="hidden" />
+                            Avec péages
+                          </label>
+                        </div>
+                      </div>
+                      {recentSearches.filter((s) => s.mode === "route").length > 0 && (
+                        <div>
+                          <p className="section-label">Recherches récentes</p>
+                          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                            {recentSearches.filter((s) => s.mode === "route").map((recent) => (
+                              <button
+                                key={recent.timestamp}
+                                type="button"
+                                onClick={() => restoreRecentSearch(recent)}
+                                className="fuel-chip"
+                              >
+                                {recent.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">
+                          Adresse
+                        </label>
+                        <div className="relative">
+                          <div className="input-with-action">
+                            <input
+                              value={addressQuery}
+                              onChange={(event) => setAddressQuery(event.target.value)}
+                              onFocus={() => setShowAddressSuggestions(true)}
+                              onBlur={() =>
+                                window.setTimeout(() => setShowAddressSuggestions(false), 150)
+                              }
+                              placeholder="Ville ou adresse"
+                              className="search-input search-input--with-action"
+                            />
                             <button
-                              key={recent.timestamp}
                               type="button"
-                              onClick={() => restoreRecentSearch(recent)}
-                              className="fuel-chip"
+                              onClick={handleGeolocate}
+                              disabled={geolocating}
+                              className="geolocate-btn"
+                              aria-label="Me localiser"
                             >
-                              {recent.label}
+                              {geolocating ? (
+                                <svg className="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#94a3b8" strokeWidth="2.5" strokeDasharray="50" strokeLinecap="round" /></svg>
+                              ) : (
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4" /><line x1="12" y1="2" x2="12" y2="6" /><line x1="12" y1="18" x2="12" y2="22" /><line x1="2" y1="12" x2="6" y2="12" /><line x1="18" y1="12" x2="22" y2="12" /></svg>
+                              )}
                             </button>
-                          ))}
+                          </div>
+                          {showAddressSuggestions && addressQuery.trim().length >= 3 && (
+                            <div className="autocomplete-panel">
+                              <div className="autocomplete-header">Suggestions</div>
+                              {loadingAddressSuggestions ? (
+                                <div className="autocomplete-empty">
+                                  Recherche en cours...
+                                </div>
+                              ) : addressSuggestions.length > 0 ? (
+                                <div className="autocomplete-list">
+                                  {addressSuggestions.map((suggestion) => (
+                                    <div
+                                      key={suggestion.id}
+                                      className="autocomplete-item"
+                                      onMouseDown={() => {
+                                        setAddressQuery(suggestion.label);
+                                        setAddressSuggestions([]);
+                                        setShowAddressSuggestions(false);
+                                      }}
+                                    >
+                                      {suggestion.label}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="autocomplete-empty">
+                                  Aucun résultat trouvé.
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {recentSearches.filter((s) => s.mode === "around").length > 0 && (
+                        <div>
+                          <p className="section-label">Recherches récentes</p>
+                          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                            {recentSearches.filter((s) => s.mode === "around").map((recent) => (
+                              <button
+                                key={recent.timestamp}
+                                type="button"
+                                onClick={() => restoreRecentSearch(recent)}
+                                className="fuel-chip"
+                              >
+                                {recent.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  <div>
+                    <p className="section-label">Carburant</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {fuelOptions.map((fuel) => (
+                        <button
+                          key={fuel.id}
+                          type="button"
+                          onClick={() => handleFuelSelect(fuel.id)}
+                          className={`fuel-chip ${selectedFuelId === fuel.id ? "fuel-chip--selected" : ""}`}
+                        >
+                          {fuel.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {error && <div className="error-banner">{error}</div>}
+
+                  <button
+                    type="submit"
+                    disabled={loading || !isReadyToSearch}
+                    className="btn-primary"
+                  >
+                    {loading ? "Recherche en cours..." : "Rechercher"}
+                  </button>
+                </form>
+              </div>
+            ) : (
+              /* ── Results view ── */
+              <div className="panel-safe-bottom">
+                {selectedStation ? (
+                  <StationDetail
+                    station={selectedStation}
+                    onBack={() => setSelectedStation(null)}
+                  />
+                ) : (
+                  <>
+                    <div className="results-header">
+                      <button
+                        type="button"
+                        className="panel-back"
+                        onClick={() => { setViewState("form"); setSelectedStation(null); }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+                        Retour
+                      </button>
+                      {hasSearched && !loading && (
+                        <span className="filter-count">
+                          {filteredStations.length} résultat
+                          {filteredStations.length > 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </div>
+
+                    {error && <div className="error-banner mb-3">{error}</div>}
+
+                    {route && (
+                      <div className="flex gap-2 flex-wrap mb-4">
+                        <span className="route-pill">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="2" y1="12" x2="22" y2="12" /><polyline points="15 5 22 12 15 19" /><polyline points="9 5 2 12 9 19" /></svg>
+                          {formatDistance(route.distance)}
+                        </span>
+                        <span className="route-pill">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                          {formatDuration(route.duration)}
+                        </span>
+                      </div>
+                    )}
+
+                    {hasSearched && !loading && (
+                      <div className="filter-bar">
+                        <div className="filter-group">
+                          <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value as "price" | "distance")}
+                            className="filter-select"
+                          >
+                            <option value="price">Prix croissant</option>
+                            <option value="distance">Distance</option>
+                          </select>
+                          {availableBrands.length > 0 && (
+                            <select
+                              value={selectedBrand}
+                              onChange={(e) => setSelectedBrand(e.target.value)}
+                              className="filter-select"
+                            >
+                              <option value="">Toutes les marques</option>
+                              {availableBrands.map((brand) => (
+                                <option key={brand} value={brand}>{brand}</option>
+                              ))}
+                            </select>
+                          )}
                         </div>
                       </div>
                     )}
-                  </>
-                ) : (
-                  <>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">
-                        Adresse
-                      </label>
-                      <div className="relative">
-                        <div className="input-with-action">
-                          <input
-                            value={addressQuery}
-                            onChange={(event) => setAddressQuery(event.target.value)}
-                            onFocus={() => setShowAddressSuggestions(true)}
-                            onBlur={() =>
-                              window.setTimeout(() => setShowAddressSuggestions(false), 150)
-                            }
-                            placeholder="Ville ou adresse"
-                            className="search-input search-input--with-action"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleGeolocate}
-                            disabled={geolocating}
-                            className="geolocate-btn"
-                            aria-label="Me localiser"
-                          >
-                            {geolocating ? (
-                              <svg className="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#94a3b8" strokeWidth="2.5" strokeDasharray="50" strokeLinecap="round" /></svg>
-                            ) : (
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4" /><line x1="12" y1="2" x2="12" y2="6" /><line x1="12" y1="18" x2="12" y2="22" /><line x1="2" y1="12" x2="6" y2="12" /><line x1="18" y1="12" x2="22" y2="12" /></svg>
-                            )}
-                          </button>
-                        </div>
-                        {showAddressSuggestions && addressQuery.trim().length >= 3 && (
-                          <div className="autocomplete-panel">
-                            <div className="autocomplete-header">Suggestions</div>
-                            {loadingAddressSuggestions ? (
-                              <div className="autocomplete-empty">
-                                Recherche en cours...
-                              </div>
-                            ) : addressSuggestions.length > 0 ? (
-                              <div className="autocomplete-list">
-                                {addressSuggestions.map((suggestion) => (
-                                  <div
-                                    key={suggestion.id}
-                                    className="autocomplete-item"
-                                    onMouseDown={() => {
-                                      setAddressQuery(suggestion.label);
-                                      setAddressSuggestions([]);
-                                      setShowAddressSuggestions(false);
-                                    }}
-                                  >
-                                    {suggestion.label}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="autocomplete-empty">
-                                Aucun résultat trouvé.
-                              </div>
-                            )}
-                          </div>
-                        )}
+
+                    {loading ? (
+                      <div className="space-y-3">
+                        {Array.from({ length: 4 }).map((_, index) => (
+                          <div key={`skeleton-${index}`} className="skeleton" />
+                        ))}
                       </div>
-                    </div>
-                    {recentSearches.filter((s) => s.mode === "around").length > 0 && (
-                      <div>
-                        <p className="section-label">Recherches récentes</p>
-                        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                          {recentSearches.filter((s) => s.mode === "around").map((recent) => (
-                            <button
-                              key={recent.timestamp}
-                              type="button"
-                              onClick={() => restoreRecentSearch(recent)}
-                              className="fuel-chip"
-                            >
-                              {recent.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                    ) : (
+                      <StationList
+                        stations={filteredStations}
+                        onSelect={(station) => {
+                          setSelectedStation(station);
+                          const isMobile = window.innerWidth < 1024;
+                          if (isMobile) setPanelMode("default");
+                          setTimeout(() => {
+                            // On mobile, offset the marker upward so it sits in the
+                            // visible area above the panel (58vh).
+                            // panBy([0, positive]) moves the map down → marker goes up.
+                            const offsetY = isMobile
+                              ? Math.round(window.innerHeight * 0.19)
+                              : 0;
+                            mapViewRef.current?.openStationPopup(
+                              station.coordinates.lat,
+                              station.coordinates.lon,
+                              offsetY,
+                            );
+                          }, 50);
+                        }}
+                        onCenterMap={(lat, lon) => {
+                          setPanelMode("minimized");
+                          setTimeout(() => {
+                            mapViewRef.current?.openStationPopup(lat, lon);
+                          }, 400);
+                        }}
+                      />
                     )}
                   </>
                 )}
-
-                <div>
-                  <p className="section-label">Carburant</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {fuelOptions.map((fuel) => (
-                      <button
-                        key={fuel.id}
-                        type="button"
-                        onClick={() => handleFuelSelect(fuel.id)}
-                        className={`fuel-chip ${selectedFuelId === fuel.id ? "fuel-chip--selected" : ""}`}
-                      >
-                        {fuel.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {error && <div className="error-banner">{error}</div>}
-
-                <button
-                  type="submit"
-                  disabled={loading || !isReadyToSearch}
-                  className="btn-primary"
-                >
-                  {loading ? "Recherche en cours..." : "Rechercher"}
-                </button>
-              </form>
-            </div>
-          ) : (
-            /* ── Results view ── */
-            <div className="panel-safe-bottom">
-              {selectedStation ? (
-                <StationDetail
-                  station={selectedStation}
-                  onBack={() => setSelectedStation(null)}
-                />
-              ) : (
-                <>
-                  <div className="results-header">
-                    <button
-                      type="button"
-                      className="panel-back"
-                      onClick={() => { setViewState("form"); setSelectedStation(null); }}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                      Retour
-                    </button>
-                    {hasSearched && !loading && (
-                      <span className="filter-count">
-                        {filteredStations.length} résultat
-                        {filteredStations.length > 1 ? "s" : ""}
-                      </span>
-                    )}
-                  </div>
-
-                  {error && <div className="error-banner mb-3">{error}</div>}
-
-                  {route && (
-                    <div className="flex gap-2 flex-wrap mb-4">
-                      <span className="route-pill">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="2" y1="12" x2="22" y2="12"/><polyline points="15 5 22 12 15 19"/><polyline points="9 5 2 12 9 19"/></svg>
-                        {formatDistance(route.distance)}
-                      </span>
-                      <span className="route-pill">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        {formatDuration(route.duration)}
-                      </span>
-                    </div>
-                  )}
-
-                  {hasSearched && !loading && (
-                    <div className="filter-bar">
-                      <div className="filter-group">
-                        <select
-                          value={sortBy}
-                          onChange={(e) => setSortBy(e.target.value as "price" | "distance")}
-                          className="filter-select"
-                        >
-                          <option value="price">Prix croissant</option>
-                          <option value="distance">Distance</option>
-                        </select>
-                        {availableBrands.length > 0 && (
-                          <select
-                            value={selectedBrand}
-                            onChange={(e) => setSelectedBrand(e.target.value)}
-                            className="filter-select"
-                          >
-                            <option value="">Toutes les marques</option>
-                            {availableBrands.map((brand) => (
-                              <option key={brand} value={brand}>{brand}</option>
-                            ))}
-                          </select>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {loading ? (
-                    <div className="space-y-3">
-                      {Array.from({ length: 4 }).map((_, index) => (
-                        <div key={`skeleton-${index}`} className="skeleton" />
-                      ))}
-                    </div>
-                  ) : (
-                    <StationList
-                      stations={filteredStations}
-                      onSelect={(station) => {
-                        setSelectedStation(station);
-                        const isMobile = window.innerWidth < 1024;
-                        if (isMobile) setPanelMode("default");
-                        setTimeout(() => {
-                          // On mobile, offset the marker upward so it sits in the
-                          // visible area above the panel (58vh).
-                          // panBy([0, positive]) moves the map down → marker goes up.
-                          const offsetY = isMobile
-                            ? Math.round(window.innerHeight * 0.29)
-                            : 0;
-                          mapViewRef.current?.openStationPopup(
-                            station.coordinates.lat,
-                            station.coordinates.lon,
-                            offsetY,
-                          );
-                        }, 50);
-                      }}
-                      onCenterMap={(lat, lon) => {
-                        setPanelMode("minimized");
-                        setTimeout(() => {
-                          mapViewRef.current?.openStationPopup(lat, lon);
-                        }, 400);
-                      }}
-                    />
-                  )}
-                </>
-              )}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

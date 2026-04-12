@@ -11,7 +11,8 @@ type ApiStation = {
         name?: string;
         shortName?: string;
         available?: boolean;
-        Price?: { value?: number; updatedAt?: string };
+        Price?: { value?: number };
+        Update?: { value?: string };
     }>;
 };
 
@@ -45,7 +46,7 @@ const mapStation = (station: ApiStation): Station | null => {
             shortName: fuel.shortName ?? "—",
             available: Boolean(fuel.available),
             price: typeof fuel.Price?.value === "number" ? fuel.Price.value : null,
-            updatedAt: fuel.Price?.updatedAt ?? null,
+            updatedAt: fuel.Update?.value ?? null,
         })) ?? [];
 
     return {

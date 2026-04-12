@@ -103,8 +103,12 @@ struct ProfileView: View {
             Spacer()
         }
         .padding(16)
-        .background(Color(.systemBackground))
+        .background(Color.elevatedCard)
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                .strokeBorder(Color.cardBorder, lineWidth: 1)
+        )
     }
 
     // MARK: - Settings Section
@@ -122,8 +126,12 @@ struct ProfileView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 4)
-            .background(Color(.systemBackground))
+            .background(Color.elevatedCard)
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                    .strokeBorder(Color.cardBorder, lineWidth: 1)
+            )
         }
     }
 

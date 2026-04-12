@@ -28,7 +28,10 @@ struct HomeMapView: View {
 
                     Spacer()
 
-                    if !vm.filteredStations.isEmpty && !vm.isHomeSearchExpanded {
+                    if vm.isLoading && vm.filteredStations.isEmpty && !vm.isHomeSearchExpanded {
+                        loadingCarouselPlaceholder
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    } else if !vm.filteredStations.isEmpty && !vm.isHomeSearchExpanded {
                         bottomCarousel
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
@@ -263,6 +266,23 @@ struct HomeMapView: View {
         }
     }
 
+    private var loadingCarouselPlaceholder: some View {
+        HStack(spacing: 12) {
+            ProgressView()
+                .tint(.brand)
+            Text("Recherche des stations…")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 18)
+        .padding(.horizontal, 20)
+        .background(.thinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal, Theme.Spacing.screenHorizontal)
+        .padding(.bottom, 10)
+    }
+
     private func zoomToStation(at index: Int) {
         let stations = vm.filteredStations
         guard index >= 0 && index < stations.count else { return }
@@ -314,11 +334,11 @@ struct HomeMapView: View {
     // MARK: - Map Fitting
 
     private func handleUserCoordinate(_ old: CLLocationCoordinate2D?, _ coord: CLLocationCoordinate2D?) {
-        guard let coord, vm.viewState == .form else { return }
+        guard let coord, old == nil else { return }
         withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
             mapPosition = .region(MKCoordinateRegion(
                 center: coord,
-                span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)
+                span: MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15)
             ))
         }
     }

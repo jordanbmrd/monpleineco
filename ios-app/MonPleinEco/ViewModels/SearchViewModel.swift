@@ -76,28 +76,58 @@ final class SearchViewModel {
         }
     }
 
-    // Called once at app launch: asks for location, fills addressQuery, recentre la carte, puis lance une recherche « autour ».
+    // Called once at app launch: asks for location, centres the map immediately,
+    // then geocodes + searches in the background so stations appear faster.
     @MainActor
     func setupInitialLocation() async {
         guard let coord = await locationManager.locateForStartup() else { return }
+        // Centre the map right away — no need to wait for geocoding/search
         userCoordinate = coord
-        let location = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
-        do {
-            let placemarks = try await CLGeocoder().reverseGeocodeLocation(location)
-            if let place = placemarks.first {
-                // Fill with the city (or neighbourhood) name only — keeps the field concise
+
+        // Start the API search using raw coordinates immediately (no geocode needed)
+        let point = Coordinate(lat: coord.latitude, lon: coord.longitude)
+        searchMode = .around
+        isLoading = true
+        viewState = .results
+
+        // Fire geocode and station fetch concurrently
+        async let geocodeTask: String? = {
+            let location = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
+            let placemarks = try? await CLGeocoder().reverseGeocodeLocation(location)
+            if let place = placemarks?.first {
                 let label = [place.locality ?? place.subLocality, place.postalCode]
                     .compactMap { $0 }
                     .joined(separator: " ")
-                if !label.isEmpty {
-                    addressQuery = label
-                    searchMode = .around
-                    await search()
-                }
+                return label.isEmpty ? nil : label
             }
-        } catch {
-            // Geocoding failed; coordinate is still stored for map centering
+            return nil
+        }()
+
+        async let stationsTask: [Station] = {
+            (try? await StationService.shared.fetchStationsAround(
+                points: [point],
+                fuelIds: [self.selectedFuel.rawValue]
+            )) ?? []
+        }()
+
+        let (label, rawStations) = await (geocodeTask, stationsTask)
+
+        // Fill address bar with geocoded name (cosmetic)
+        if let label { addressQuery = label }
+
+        // Enrich results
+        let fuelIds = [selectedFuel.rawValue]
+        let mapped: [StationWithMetrics] = rawStations.compactMap { station in
+            enrichStation(station, fuelIds: fuelIds, referencePoint: point)
         }
+        let sorted = mapped.sorted { $0.bestPrice < $1.bestPrice }
+        let enriched = rankStations(sorted)
+
+        stations = enriched
+        updateBrands(from: enriched)
+        if let label { saveSearch(label: label, address: label) }
+
+        isLoading = false
     }
 
     // MARK: - Computed

@@ -67,12 +67,12 @@ struct PriceAnnotationView: View {
             .padding(.vertical, isTop3 ? 7 : 5)
             .background(
                 Capsule()
-                    .fill(isTop3 ? AnyShapeStyle(.brandGradient) : AnyShapeStyle(Color(.systemBackground)))
+                    .fill(isTop3 ? AnyShapeStyle(.brandGradient) : AnyShapeStyle(Color.elevatedCard))
             )
             .overlay(
                 Capsule()
                     .stroke(
-                        isSelected ? Color.brand : (isTop3 ? .clear : Color(.separator).opacity(0.5)),
+                        isSelected ? Color.brand : (isTop3 ? .clear : Color.cardBorder),
                         lineWidth: isSelected ? 2.5 : (isTop3 ? 0 : 1)
                     )
             )
@@ -85,7 +85,7 @@ struct PriceAnnotationView: View {
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
 
             AnnotationPointer()
-                .fill(isTop3 ? Color.brand : Color(.systemBackground))
+                .fill(isTop3 ? Color.brand : Color.elevatedCard)
                 .frame(width: 12, height: 6)
                 .offset(y: -1)
         }

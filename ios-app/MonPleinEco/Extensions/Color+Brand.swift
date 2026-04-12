@@ -11,6 +11,21 @@ extension Color {
     static let podiumGold = Color(red: 245/255, green: 158/255, blue: 11/255)
     static let podiumSilver = Color(red: 148/255, green: 163/255, blue: 184/255)
     static let podiumBronze = Color(red: 217/255, green: 119/255, blue: 6/255)
+
+    /// Card background that provides visible elevation in dark mode.
+    /// Light mode: white. Dark mode: slightly lighter than systemBackground.
+    static let elevatedCard = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(white: 0.16, alpha: 1)   // lighter than systemBackground (0.11)
+            : .systemBackground                  // white
+    })
+
+    /// Subtle border that stays visible in dark mode.
+    static let cardBorder = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.10)
+            : UIColor(white: 0, alpha: 0.06)
+    })
 }
 
 extension ShapeStyle where Self == Color {

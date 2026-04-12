@@ -34,5 +34,10 @@
 	<string>Mon Plein Éco utilise votre position pour trouver les stations essence les moins chères autour de vous.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>comgooglemaps</string>
+		<string>waze</string>
+	</array>
 </dict>
 </plist>

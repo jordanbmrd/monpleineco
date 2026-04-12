@@ -3,6 +3,7 @@ import SwiftUI
 struct FavoritesView: View {
     private var favoritesManager = FavoritesManager.shared
     @AppStorage("defaultFuelRawValue") private var defaultFuelRawValue = FuelType.sp95E10.rawValue
+    @AppStorage("tankSize") private var tankSize = 50
     @State private var path = NavigationPath()
 
     private var preferredFuel: FuelType {
@@ -39,23 +40,26 @@ struct FavoritesView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 28) {
             Spacer()
 
             ZStack {
                 Circle()
-                    .fill(Color.brand.opacity(0.08))
-                    .frame(width: 100, height: 100)
+                    .fill(Color.brand.opacity(0.06))
+                    .frame(width: 120, height: 120)
+                Circle()
+                    .fill(Color.brand.opacity(0.04))
+                    .frame(width: 90, height: 90)
                 Image(systemName: "heart.fill")
-                    .font(.system(size: 40, weight: .medium))
-                    .foregroundStyle(.brand.opacity(0.4))
+                    .font(.system(size: 36, weight: .medium))
+                    .foregroundStyle(.brand.opacity(0.35))
             }
 
             VStack(spacing: 8) {
                 Text("Aucun favori")
                     .font(.title3.weight(.bold))
 
-                Text("Vos stations favorites apparaîtront ici.")
+                Text("Ajoutez des stations pour suivre leurs prix.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -69,102 +73,164 @@ struct FavoritesView: View {
     }
 
     private var favoritesList: some View {
-        List {
+        ScrollView {
             if favoritesManager.isRefreshing {
-                HStack {
-                    Spacer()
-                    ProgressView("Actualisation des prix…")
-                        .font(.caption)
-                    Spacer()
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("Actualisation…")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
                 }
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
+                .padding(.vertical, 8)
             }
 
-            ForEach(favoritesManager.favorites) { station in
-                Button {
-                    path.append(station)
-                } label: {
-                    FavoriteStationRow(station: station, preferredFuel: preferredFuel)
-                }
-                .buttonStyle(.plain)
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
-                .swipeActions(edge: .trailing) {
-                    Button(role: .destructive) {
-                        withAnimation {
-                            favoritesManager.toggle(station)
-                        }
+            LazyVStack(spacing: 12) {
+                ForEach(favoritesManager.favorites) { station in
+                    Button {
+                        path.append(station)
                     } label: {
-                        Label("Supprimer", systemImage: "trash")
+                        FavoriteStationCard(
+                            station: station,
+                            preferredFuel: preferredFuel,
+                            tankSize: tankSize
+                        )
                     }
+                    .buttonStyle(CardPressStyle())
                 }
             }
+            .padding(.horizontal, Theme.Spacing.screenHorizontal)
+            .padding(.vertical, 8)
         }
-        .listStyle(.plain)
     }
 }
 
-// MARK: - Favorite Station Row
+// MARK: - Favorite Station Card
 
-private struct FavoriteStationRow: View {
+private struct FavoriteStationCard: View {
     let station: Station
     let preferredFuel: FuelType
+    let tankSize: Int
 
-    private var preferredFuelEntry: StationFuel? {
+    private var fuelEntry: StationFuel? {
         station.fuels.first { $0.id == preferredFuel.rawValue }
     }
 
     private var isUnavailable: Bool {
-        guard let entry = preferredFuelEntry else { return true }
+        guard let entry = fuelEntry else { return true }
         return !entry.available || entry.price == nil
     }
 
+    private var dropColor: Color {
+        preferredFuel.dropColor
+    }
+
     var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "fuelpump.fill")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(isUnavailable ? Color.secondary : Color.brand)
-                .frame(width: 44, height: 44)
-                .background((isUnavailable ? Color.secondary : Color.brand).opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        VStack(spacing: 0) {
+            HStack(spacing: 14) {
+                // Fuel icon
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(isUnavailable ? Color(.tertiarySystemFill) : dropColor.opacity(0.12))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "fuelpump.fill")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(isUnavailable ? Color(.tertiaryLabel) : dropColor)
+                }
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(station.name)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-                Text(station.brand ?? "Indépendant")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
+                // Station info
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(station.name)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
 
-            Spacer()
+                    HStack(spacing: 6) {
+                        if let brand = station.brand {
+                            Text(brand)
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
 
-            if isUnavailable {
-                VStack(alignment: .trailing, spacing: 2) {
+                        if let city = station.city {
+                            if station.brand != nil {
+                                Circle()
+                                    .fill(Color(.quaternaryLabel))
+                                    .frame(width: 3, height: 3)
+                            }
+                            Text(city)
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(.tertiary)
+                                .lineLimit(1)
+                        }
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                // Price or unavailable badge
+                if isUnavailable {
                     Text("Indisponible")
-                        .font(.caption.weight(.semibold))
+                        .font(.caption2.weight(.bold))
                         .foregroundStyle(.secondary)
-                    Text(preferredFuel.shortName)
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color(.tertiarySystemFill), in: Capsule())
+                } else if let price = fuelEntry?.price {
+                    VStack(alignment: .trailing, spacing: 4) {
+                        HStack(alignment: .firstTextBaseline, spacing: 2) {
+                            Text(FormattingUtils.formatPrice(price))
+                                .font(.system(.title3, design: .rounded, weight: .black))
+                                .foregroundStyle(.brand)
+                                .monospacedDigit()
+                            Text("€/L")
+                                .font(.system(.caption2, design: .rounded, weight: .bold))
+                                .foregroundStyle(.secondary)
+                        }
+
+                        let total = price * Double(tankSize)
+                        Text("\(String(format: "%.2f", total)) € le plein")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                    }
                 }
-            } else if let price = preferredFuelEntry?.price {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(FormattingUtils.formatPrice(price))
-                        .font(.system(.callout, design: .rounded, weight: .heavy))
-                        .foregroundStyle(.brand)
-                        .monospacedDigit()
-                    Text(preferredFuel.shortName)
-                        .font(.caption2.weight(.medium))
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.quaternary)
+                    .padding(.leading, 2)
+            }
+            .padding(16)
+
+            // Fuel type indicator bar
+            if !isUnavailable {
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(dropColor)
+                        .frame(width: 6, height: 6)
+                    Text(preferredFuel.label)
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                        .tracking(0.5)
+                    Spacer()
                 }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+                .padding(.top, -2)
             }
         }
-        .padding(14)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        .background(Color.elevatedCard)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(
+                    isUnavailable ? Color.cardBorder : dropColor.opacity(0.2),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: .black.opacity(0.06), radius: 12, y: 5)
+        .shadow(color: .black.opacity(0.02), radius: 3, y: 1)
     }
 }

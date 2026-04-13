@@ -6,8 +6,15 @@ export default function PrivacyPolicyPage() {
   const content = fs.readFileSync(mdPath, "utf8");
 
   return (
-    <main>
-      <pre style={{ whiteSpace: "pre-wrap" }}>{content}</pre>
+    <main
+      style={{
+        height: "100vh",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+        padding: 16,
+      }}
+    >
+      <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{content}</pre>
     </main>
   );
 }

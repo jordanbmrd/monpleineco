@@ -1,4 +1,6 @@
 import SwiftUI
+import StoreKit
+import UIKit
 
 struct ProfileView: View {
     @AppStorage("defaultFuelRawValue") private var defaultFuelRawValue = FuelType.sp95E10.rawValue
@@ -8,6 +10,7 @@ struct ProfileView: View {
     @State private var showTankPicker = false
     @State private var showTerms = false
     @State private var showPrivacy = false
+    private let appShareURL = URL(string: "http://monpleineco.fr/privacy-policy")!
 
     private var defaultFuel: FuelType {
         FuelType(rawValue: defaultFuelRawValue) ?? .sp95E10
@@ -46,9 +49,17 @@ struct ProfileView: View {
                     }
 
                     settingsSection(title: "Support") {
-                        settingsRow(icon: "star.fill", label: "Noter l'application", showChevron: true)
+                        Button {
+                            requestReview()
+                        } label: {
+                            settingsRow(icon: "star.fill", label: "Noter l'application", showChevron: true)
+                        }
+                        .buttonStyle(.plain)
                         Divider().padding(.leading, 48)
-                        settingsRow(icon: "square.and.arrow.up", label: "Partager", showChevron: true)
+                        ShareLink(item: appShareURL) {
+                            settingsRow(icon: "square.and.arrow.up", label: "Partager", showChevron: true)
+                        }
+                        .buttonStyle(.plain)
                         Divider().padding(.leading, 48)
                         Button {
                             showAbout = true
@@ -302,6 +313,13 @@ struct ProfileView: View {
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+    }
+
+    private func requestReview() {
+        guard let scene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first else { return }
+        SKStoreReviewController.requestReview(in: scene)
     }
 
     // MARK: - Terms of Use

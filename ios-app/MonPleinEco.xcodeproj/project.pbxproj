@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		038DBB4FD9624CBD322E6899 /* FuelChipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7336CEC5E9C1D2F932DF770C /* FuelChipView.swift */; };
 		0E7335703912BE2319CF7C8A /* Color+Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81EF59B007D37162B1A6D7B /* Color+Brand.swift */; };
-
 		243F6DF64AAE869CAC55B317 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C840E2185E749E35B0A36987 /* SearchViewModel.swift */; };
 		26160D28207A63E98086DE33 /* StationDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3EBA4AA86E6BB6C3EA7A3C3 /* StationDetailView.swift */; };
 		338ED5906072B0E1967FB0DC /* SearchHistoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5839B1812E5DCF70009F4A4 /* SearchHistoryManager.swift */; };
@@ -27,6 +26,7 @@
 		8A3ABB8987E02D4BCDEC719E /* FavoritesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BE44D7A1116365BB64F1DE5 /* FavoritesView.swift */; };
 		9B51B9BDC2F61C3AA954F61C /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85561F596739E531B012731A /* LocationManager.swift */; };
 		9C4F17FF445B8DD9A2655BB4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8A484DD6C939E75AC8FE6952 /* Assets.xcassets */; };
+		9CF96D3B874A11C4E50B9AA1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 9ECA14DF3BA6F6C7D2D85DD7 /* PrivacyInfo.xcprivacy */; };
 		A00FBF1800A2DBB06358D9E3 /* SearchOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17915ACB854A6CE1E6FED651 /* SearchOverlayView.swift */; };
 		AD33EC270D63C454607E3094 /* RoutingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8C443AEAD8F6DF7EF8D082 /* RoutingService.swift */; };
 		B771900A200C979E7DE5E29E /* FuelType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07BF21151E85B0D1F9DA073C /* FuelType.swift */; };
@@ -50,13 +50,14 @@
 		7336CEC5E9C1D2F932DF770C /* FuelChipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelChipView.swift; sourceTree = "<group>"; };
 		758D1E5A62FD7EE5B9D640C5 /* MonPleinEco.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MonPleinEco.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A195C3B0F4B40E5D0478D71 /* MonPleinEcoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonPleinEcoApp.swift; sourceTree = "<group>"; };
-
 		805E90E2C98F678D1F14663D /* HomeMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeMapView.swift; sourceTree = "<group>"; };
 		85561F596739E531B012731A /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		88B5B56CB6F8113EC0D71D02 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		9ECA14DF3BA6F6C7D2D85DD7 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		8A484DD6C939E75AC8FE6952 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8E76C2A6F4DF2BD648609307 /* RecentSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentSearch.swift; sourceTree = "<group>"; };
 		9BE44D7A1116365BB64F1DE5 /* FavoritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718ABCD1234 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		B1E7720D23A1B20149672E11 /* FilterBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterBarView.swift; sourceTree = "<group>"; };
 		B3EBA4AA86E6BB6C3EA7A3C3 /* StationDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationDetailView.swift; sourceTree = "<group>"; };
 		B81EF59B007D37162B1A6D7B /* Color+Brand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Brand.swift"; sourceTree = "<group>"; };
@@ -65,7 +66,6 @@
 		DCE9522F24603944600106CB /* GeoUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoUtils.swift; sourceTree = "<group>"; };
 		E1CDE38F58B88823BEE4A755 /* StationCarouselCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationCarouselCard.swift; sourceTree = "<group>"; };
 		E92D6D206BCEAA56DA6CEE3C /* Station.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Station.swift; sourceTree = "<group>"; };
-		A1B2C3D4E5F60718ABCD1234 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		F5839B1812E5DCF70009F4A4 /* SearchHistoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchHistoryManager.swift; sourceTree = "<group>"; };
 		F9C058CA5F686C07E85FDBBC /* AppLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLog.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -111,6 +111,7 @@
 			children = (
 				8A484DD6C939E75AC8FE6952 /* Assets.xcassets */,
 				88B5B56CB6F8113EC0D71D02 /* Info.plist */,
+				9ECA14DF3BA6F6C7D2D85DD7 /* PrivacyInfo.xcprivacy */,
 				53047A53BE34EFD274077E2A /* App */,
 				C3646AC746EE8522A0032AB6 /* Extensions */,
 				8E905113B477223583EB49EA /* Models */,
@@ -179,6 +180,14 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
+		AABB1122334455667788CCDD /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60718ABCD1234 /* OnboardingView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
 		B424E72126FBF96A124B9A13 /* Views */ = {
 			isa = PBXGroup;
 			children = (
@@ -192,14 +201,6 @@
 				1EB30567E174A3F8DE0133C2 /* Tabs */,
 			);
 			path = Views;
-			sourceTree = "<group>";
-		};
-		AABB1122334455667788CCDD /* Onboarding */ = {
-			isa = PBXGroup;
-			children = (
-				A1B2C3D4E5F60718ABCD1234 /* OnboardingView.swift */,
-			);
-			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		C3646AC746EE8522A0032AB6 /* Extensions */ = {
@@ -281,6 +282,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9C4F17FF445B8DD9A2655BB4 /* Assets.xcassets in Resources */,
+				9CF96D3B874A11C4E50B9AA1 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -327,14 +329,16 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 65D3N4Z35P;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 875N8R26J8;
 				INFOPLIST_FILE = MonPleinEco/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = fr.monpleineco.ios;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -345,7 +349,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 65D3N4Z35P;
+				DEVELOPMENT_TEAM = 875N8R26J8;
 				INFOPLIST_FILE = MonPleinEco/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

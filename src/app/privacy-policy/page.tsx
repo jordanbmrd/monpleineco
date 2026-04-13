@@ -11,11 +11,15 @@ export default async function PrivacyPolicyPage() {
   const filePath = path.join(process.cwd(), "src/content/privacy-policy.md");
   const fileContent = fs.readFileSync(filePath, "utf8");
 
-  const processed = await remark().use(remarkHtml).process(fileContent);
+  // Content is from a static, version-controlled file — not user input.
+  const processed = await remark()
+    .use(remarkHtml, { sanitize: true })
+    .process(fileContent);
   const contentHtml = processed.toString();
 
   return (
     <main style={{ maxWidth: 800, margin: "0 auto", padding: "2rem 1rem" }}>
+      {/* sanitize:true is applied above; source is a static repo file */}
       <div dangerouslySetInnerHTML={{ __html: contentHtml }} />
     </main>
   );

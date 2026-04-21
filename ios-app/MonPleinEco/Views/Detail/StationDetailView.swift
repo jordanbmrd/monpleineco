@@ -85,6 +85,12 @@ struct StationDetailView: View {
                         .offset(y: appeared ? 0 : 20)
                         .opacity(appeared ? 1 : 0)
 
+                    if !stationServices.isEmpty {
+                        servicesSection
+                            .offset(y: appeared ? 0 : 20)
+                            .opacity(appeared ? 1 : 0)
+                    }
+
                     shareButton
                         .offset(y: appeared ? 0 : 20)
                         .opacity(appeared ? 1 : 0)
@@ -344,6 +350,126 @@ struct StationDetailView: View {
                 )
             }
         }
+    }
+
+    // MARK: - Services Section
+
+    private var stationServices: [String] {
+        station.station.services ?? []
+    }
+
+    private var servicesSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Text("Services")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.primary)
+
+                Text("\(stationServices.count)")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.brand)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.brand.opacity(0.1), in: Capsule())
+            }
+
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 0),
+                    GridItem(.flexible(), spacing: 0)
+                ],
+                spacing: 0
+            ) {
+                ForEach(Array(stationServices.enumerated()), id: \.offset) { index, service in
+                    serviceRow(service, index: index)
+                }
+            }
+            .background(Color.elevatedCard)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(Color.cardBorder, lineWidth: 1)
+            )
+        }
+    }
+
+    private func serviceRow(_ service: String, index: Int) -> some View {
+        let isLeftColumn = index % 2 == 0
+        let hasRightPartner = index + 1 < stationServices.count
+        let lastRowStart = (stationServices.count - 1) - ((stationServices.count - 1) % 2)
+        let isLastRow = index >= lastRowStart
+
+        return HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.brand.opacity(0.12))
+                    .frame(width: 32, height: 32)
+                Image(systemName: StationDetailView.icon(forService: service))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.brand)
+            }
+
+            Text(service)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .trailing) {
+            if isLeftColumn && hasRightPartner {
+                Rectangle()
+                    .fill(Color.cardBorder)
+                    .frame(width: 1)
+                    .padding(.vertical, 6)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if !isLastRow {
+                Rectangle()
+                    .fill(Color.cardBorder)
+                    .frame(height: 1)
+            }
+        }
+    }
+
+    static func icon(forService service: String) -> String {
+        let key = service
+            .folding(options: .diacriticInsensitive, locale: .init(identifier: "fr"))
+            .lowercased()
+
+        if key.contains("gonflage") { return "gauge.medium" }
+        if key.contains("lavage") { return "sparkles" }
+        if key.contains("laverie") { return "washer.fill" }
+        if key.contains("toilette") { return "toilet.fill" }
+        if key.contains("restauration") { return "fork.knife" }
+        if key.contains("bar") { return "wineglass.fill" }
+        if key.contains("boutique") { return "bag.fill" }
+        if key.contains("alimentaire") { return "cart.fill" }
+        if key.contains("additif") || key.contains("additive") { return "drop.fill" }
+        if key.contains("colis") { return "shippingbox.fill" }
+        if key.contains("dab") || key.contains("distributeur automatique de billets") || key.contains("billets") {
+            return "eurosign.circle.fill"
+        }
+        if key.contains("automate") || key.contains("cb ") || key.contains("24/24") || key.contains("carte bancaire") {
+            return "creditcard.fill"
+        }
+        if key.contains("poids lourds") || key.contains("piste pl") { return "truck.box.fill" }
+        if key.contains("fioul") { return "flame" }
+        if key.contains("gaz") { return "flame.fill" }
+        if key.contains("reparation") || key.contains("entretien") { return "wrench.and.screwdriver.fill" }
+        if key.contains("wifi") { return "wifi" }
+        if key.contains("douche") { return "shower.fill" }
+        if key.contains("piste") { return "road.lanes" }
+        if key.contains("gnv") || key.contains("gpl") { return "bolt.fill" }
+        if key.contains("electrique") || key.contains("borne") || key.contains("recharge") { return "bolt.car.fill" }
+        if key.contains("aire") && key.contains("jeux") { return "figure.play" }
+        if key.contains("parking") { return "parkingsign" }
+        return "checkmark.seal.fill"
     }
 
     // MARK: - Share

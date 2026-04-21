@@ -16,17 +16,17 @@ struct StationCarouselCard: View {
                     RoundedRectangle(cornerRadius: 2, style: .continuous)
                         .fill(rankGradient)
                         .frame(width: 4)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 10)
                 }
 
                 VStack(spacing: 0) {
                     // Top row: rank + name + brand
-                    HStack(alignment: .top, spacing: 12) {
+                    HStack(alignment: .top, spacing: 10) {
                         // Rank indicator
                         ZStack {
                             Circle()
                                 .fill(isTop3 ? rankColor.opacity(0.12) : Color(.tertiarySystemFill))
-                                .frame(width: 36, height: 36)
+                                .frame(width: 30, height: 30)
                             Text("\(station.rank)")
                                 .font(.system(.caption, design: .rounded, weight: .black))
                                 .foregroundStyle(isTop3 ? rankColor : .secondary)
@@ -60,15 +60,17 @@ struct StationCarouselCard: View {
                         }
 
                         Spacer(minLength: 0)
+
+                        BrandBadgeView(brand: station.station.brand, size: 28)
                     }
 
-                    Spacer(minLength: 8)
+                    Spacer(minLength: 4)
 
                     // Bottom row: price + full tank
                     HStack(alignment: .bottom) {
                         HStack(alignment: .firstTextBaseline, spacing: 3) {
                             Text(FormattingUtils.formatPrice(station.bestPrice))
-                                .font(.system(size: 26, weight: .black, design: .rounded))
+                                .font(.system(size: 22, weight: .black, design: .rounded))
                                 .foregroundStyle(isTop3 ? rankColor : .brand)
                                 .monospacedDigit()
                             VStack(alignment: .leading, spacing: 0) {
@@ -100,8 +102,8 @@ struct StationCarouselCard: View {
                             .padding(.leading, 4)
                     }
                 }
-                .padding(.horizontal, isTop3 ? 14 : 16)
-                .padding(.vertical, 14)
+                .padding(.horizontal, isTop3 ? 12 : 14)
+                .padding(.vertical, 10)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {

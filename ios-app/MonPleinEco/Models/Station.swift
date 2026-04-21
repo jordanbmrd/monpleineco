@@ -31,6 +31,7 @@ struct Station: Codable, Identifiable, Hashable {
     let city: String?
     let coordinates: Coordinate
     let fuels: [StationFuel]
+    let services: [String]?
 }
 
 struct StationWithMetrics: Identifiable, Hashable {
@@ -69,6 +70,7 @@ struct ApiStation: Decodable {
     let Address: ApiAddress?
     let Coordinates: ApiCoordinates?
     let Fuels: [ApiStationFuel]?
+    let Services: [String]?
 
     struct ApiBrand: Decodable {
         let name: String?
@@ -109,7 +111,8 @@ struct ApiStation: Decodable {
             address: Address?.street_line,
             city: Address?.city_line,
             coordinates: Coordinate(lat: lat, lon: lon),
-            fuels: mappedFuels
+            fuels: mappedFuels,
+            services: Services
         )
     }
 }

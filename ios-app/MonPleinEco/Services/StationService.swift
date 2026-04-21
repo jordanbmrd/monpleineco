@@ -90,7 +90,7 @@ actor StationService {
         )!
 
         var queryItems: [URLQueryItem] = [
-            URLQueryItem(name: "responseFields", value: "Fuels,Price")
+            URLQueryItem(name: "responseFields", value: "Fuels,Price,Services")
         ]
         if !fuelIds.isEmpty {
             queryItems.append(URLQueryItem(name: "fuels", value: fuelIds.map(String.init).joined(separator: ",")))

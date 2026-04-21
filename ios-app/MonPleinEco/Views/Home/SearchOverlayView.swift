@@ -8,6 +8,10 @@ struct SearchOverlayView: View {
     @State private var completer = AddressCompleter()
     @FocusState private var fieldFocused: Bool
 
+    private var isRouteCollapsed: Bool {
+        vm.searchMode == .route && vm.routeResult != nil && !isExpanded
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if isExpanded && vm.searchMode == .around && !completer.suggestions.isEmpty {
@@ -23,11 +27,15 @@ struct SearchOverlayView: View {
 
             if vm.searchMode == .around {
                 aroundSearchBar
+            } else if isRouteCollapsed {
+                collapsedRouteBar
+                    .transition(.opacity)
             } else {
                 routeSearchBar
+                    .transition(.opacity)
             }
 
-            if isExpanded || vm.searchMode == .route {
+            if isExpanded || (vm.searchMode == .route && vm.routeResult == nil) {
                 Divider().padding(.horizontal, 16)
                 bottomExpandedContent
                     .transition(.opacity.combined(with: .move(edge: .top)))
@@ -183,15 +191,27 @@ struct SearchOverlayView: View {
                         .scaleEffect(0.68)
                         .frame(width: 22, height: 22)
                 }
-                Image(systemName: "slider.horizontal.3")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.brand)
+                Button {
+                    Task {
+                        await vm.geolocate()
+                        triggerAroundSearch()
+                    }
+                } label: {
+                    ZStack {
+                        if vm.locationManager.isLocating {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                        } else {
+                            Image(systemName: "location.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.brand)
+                        }
+                    }
                     .frame(width: 36, height: 36)
                     .background(Color.brand.opacity(0.1))
                     .clipShape(Circle())
-                    .onTapGesture {
-                        withAnimation { isExpanded = true }
-                    }
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 16)
@@ -206,7 +226,7 @@ struct SearchOverlayView: View {
     // MARK: - Route Search Bar
 
     private var routeSearchBar: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 4) {
             HStack(alignment: .center, spacing: 10) {
                 VStack(spacing: 0) {
                     Circle()
@@ -214,13 +234,13 @@ struct SearchOverlayView: View {
                         .frame(width: 8, height: 8)
                     Rectangle()
                         .fill(Color(.separator))
-                        .frame(width: 1.5, height: 24)
+                        .frame(width: 1.5, height: 18)
                     Image(systemName: "mappin.circle.fill")
                         .font(.system(size: 12))
                         .foregroundStyle(.red)
                 }
 
-                VStack(spacing: 6) {
+                VStack(spacing: 4) {
                     AddressSearchField(placeholder: "Départ", text: $vm.fromQuery)
                     AddressSearchField(placeholder: "Arrivée", text: $vm.toQuery)
                 }
@@ -238,7 +258,7 @@ struct SearchOverlayView: View {
                 .sensoryFeedback(.impact(weight: .medium), trigger: vm.swapTrigger)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.vertical, 4)
 
             HStack(spacing: 8) {
                 ToggleChip(label: "Sans péages", isSelected: vm.avoidTolls) {
@@ -250,14 +270,46 @@ struct SearchOverlayView: View {
                 Spacer()
             }
             .padding(.horizontal, 16)
-            .padding(.bottom, 4)
+            .padding(.bottom, 2)
         }
+    }
+
+    // MARK: - Collapsed Route Bar
+
+    private var collapsedRouteBar: some View {
+        Button {
+            withAnimation { isExpanded = true }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "road.lanes")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.brand)
+
+                Text("\(vm.fromQuery) → \(vm.toQuery)")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Image(systemName: "pencil")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.brand)
+                    .frame(width: 30, height: 30)
+                    .background(Color.brand.opacity(0.1))
+                    .clipShape(Circle())
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Bottom Expanded Content
 
     private var bottomExpandedContent: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             fuelChips
 
             Button {
@@ -281,22 +333,22 @@ struct SearchOverlayView: View {
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                .padding(.vertical, 12)
                 .background(.brandGradient)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             .disabled(!vm.isReadyToSearch || vm.isLoading)
             .opacity(vm.isReadyToSearch ? 1 : 0.5)
             .padding(.horizontal, 16)
-            .padding(.bottom, 16)
+            .padding(.bottom, 12)
         }
-        .padding(.top, 12)
+        .padding(.top, 8)
     }
 
     // MARK: - Fuel Chips
 
     private var fuelChips: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text("Carburant")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)

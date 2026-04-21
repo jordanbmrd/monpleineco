@@ -12,18 +12,21 @@ struct HomeMapView: View {
     @State private var navigateToDetail = false
     @State private var visibleStationIndex: Int = 0
     @State private var currentSpan: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 8, longitudeDelta: 8)
+    @State private var currentMapCenter: CLLocationCoordinate2D?
     @State private var carouselID = UUID()
+
+    private let searchHereThresholdMeters: Double = 5000
 
     var body: some View {
         NavigationStack {
             ZStack {
                 mapLayer.ignoresSafeArea()
 
-                VStack {
+                VStack(spacing: 0) {
                     if let route = vm.routeResult, vm.searchMode == .route {
                         routeInfoBar(route)
                             .padding(.horizontal, Theme.Spacing.screenHorizontal)
-                            .padding(.top, 4)
+                            .padding(.top, 0)
                     }
 
                     Spacer()
@@ -39,6 +42,15 @@ struct HomeMapView: View {
                     searchOverlay
                         .padding(.horizontal, Theme.Spacing.screenHorizontal)
                         .padding(.bottom, 8)
+                }
+
+                if shouldShowSearchHere {
+                    VStack {
+                        searchHereButton
+                        Spacer()
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .ignoresSafeArea(edges: .bottom)
                 }
             }
             .onChange(of: vm.userCoordinate) { old, coord in
@@ -131,6 +143,9 @@ struct HomeMapView: View {
         .mapStyle(.standard(pointsOfInterest: .excludingAll))
         .onMapCameraChange(frequency: .onEnd) { context in
             currentSpan = context.region.span
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                currentMapCenter = context.region.center
+            }
         }
         .onTapGesture { _ in
             if vm.isHomeSearchExpanded {
@@ -259,8 +274,8 @@ struct HomeMapView: View {
             ))
             .id(carouselID)
         }
-        .frame(height: 150)
-        .padding(.bottom, 10)
+        .frame(height: 118)
+        .padding(.bottom, 6)
         .onChange(of: visibleStationIndex) { _, newIndex in
             zoomToStation(at: newIndex)
         }
@@ -292,39 +307,80 @@ struct HomeMapView: View {
         }
     }
 
+    // MARK: - Search Here Button
+
+    private var shouldShowSearchHere: Bool {
+        guard vm.searchMode == .around,
+              !vm.isHomeSearchExpanded,
+              !vm.isLoading,
+              currentSpan.latitudeDelta <= 0.35,
+              let center = currentMapCenter
+        else { return false }
+
+        var anchors: [Coordinate] = []
+        if let startPoint = vm.startPoint { anchors.append(startPoint) }
+        anchors.append(contentsOf: vm.filteredStations.map { $0.station.coordinates })
+        guard !anchors.isEmpty else { return false }
+
+        let centerCoord = Coordinate(lat: center.latitude, lon: center.longitude)
+        let minDist = anchors.map { GeoUtils.haversineMeters($0, centerCoord) }.min() ?? .infinity
+        return minDist > searchHereThresholdMeters
+    }
+
+    private var searchHereButton: some View {
+        Button {
+            guard let center = currentMapCenter else { return }
+            Task { await vm.searchAroundCoordinate(center) }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.clockwise.circle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.brand)
+                Text("Rechercher dans cette zone")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial)
+            .clipShape(Capsule())
+            .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
+        }
+        .buttonStyle(.plain)
+        .sensoryFeedback(.impact(weight: .light), trigger: vm.isLoading)
+    }
+
     // MARK: - Route Info
 
     private func routeInfoBar(_ route: RouteResult) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Image(systemName: "car.fill")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.brand)
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: "car.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.brand)
 
-                Text("\(vm.fromQuery) → \(vm.toQuery)")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.85)
-                    .multilineTextAlignment(.leading)
-            }
+            Text("\(vm.fromQuery) → \(vm.toQuery)")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .truncationMode(.middle)
 
-            HStack(spacing: 8) {
-                Text(FormattingUtils.formatDistance(route.distance))
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.secondary)
+            Spacer(minLength: 6)
 
-                Text("·")
-                    .font(.caption2)
-                    .foregroundStyle(.quaternary)
+            Text(FormattingUtils.formatDistance(route.distance))
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
 
-                Text(FormattingUtils.formatDuration(route.duration))
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.brand)
-            }
+            Text("·")
+                .font(.caption2)
+                .foregroundStyle(.quaternary)
+
+            Text(FormattingUtils.formatDuration(route.duration))
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.brand)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.vertical, 7)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))

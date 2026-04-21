@@ -89,6 +89,9 @@ final class SearchViewModel {
         searchMode = .around
         isLoading = true
         viewState = .results
+        startPoint = point
+        endPoint = nil
+        routeResult = nil
 
         // Fire geocode and station fetch concurrently
         async let geocodeTask: String? = {
@@ -215,6 +218,56 @@ final class SearchViewModel {
             self.error = error.localizedDescription
             stations = []
         }
+
+        isLoading = false
+    }
+
+    @MainActor
+    func searchAroundCoordinate(_ coord: CLLocationCoordinate2D) async {
+        let point = Coordinate(lat: coord.latitude, lon: coord.longitude)
+        searchMode = .around
+        error = nil
+        selectedStation = nil
+        isLoading = true
+        viewState = .results
+        startPoint = point
+        endPoint = nil
+        routeResult = nil
+
+        async let geocodeTask: String? = {
+            let location = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
+            let placemarks = try? await CLGeocoder().reverseGeocodeLocation(location)
+            if let place = placemarks?.first {
+                let label = [place.locality ?? place.subLocality, place.postalCode]
+                    .compactMap { $0 }
+                    .joined(separator: " ")
+                return label.isEmpty ? nil : label
+            }
+            return nil
+        }()
+
+        async let stationsTask: [Station] = {
+            (try? await StationService.shared.fetchStationsAround(
+                points: [point],
+                fuelIds: [self.selectedFuel.rawValue]
+            )) ?? []
+        }()
+
+        let (label, rawStations) = await (geocodeTask, stationsTask)
+
+        if let label { addressQuery = label }
+
+        let fuelIds = [selectedFuel.rawValue]
+        let mapped: [StationWithMetrics] = rawStations.compactMap { station in
+            enrichStation(station, fuelIds: fuelIds, referencePoint: point)
+        }
+        let sorted = mapped.sorted { $0.bestPrice < $1.bestPrice }
+        let enriched = rankStations(sorted)
+
+        stations = enriched
+        updateBrands(from: enriched)
+        lastSearchMode = .around
+        if let label { saveSearch(label: label, address: label) }
 
         isLoading = false
     }

@@ -1,6 +1,8 @@
 import SwiftUI
 import StoreKit
 import UIKit
+import WebKit
+import CoreLocation
 
 struct ProfileView: View {
     @AppStorage("defaultFuelRawValue") private var defaultFuelRawValue = FuelType.sp95E10.rawValue
@@ -10,10 +12,22 @@ struct ProfileView: View {
     @State private var showTankPicker = false
     @State private var showTerms = false
     @State private var showPrivacy = false
+    @State private var locationAuthStatus: CLAuthorizationStatus = CLLocationManager().authorizationStatus
     private let appShareURL = URL(string: "http://monpleineco.fr/privacy-policy")!
 
     private var defaultFuel: FuelType {
         FuelType(rawValue: defaultFuelRawValue) ?? .sp95E10
+    }
+
+    private var locationStatusLabel: String {
+        switch locationAuthStatus {
+        case .authorizedAlways:    return "Toujours"
+        case .authorizedWhenInUse: return "Quand l'app est ouverte"
+        case .denied:              return "Refusée"
+        case .restricted:          return "Restreinte"
+        case .notDetermined:       return "Non définie"
+        @unknown default:          return "Inconnue"
+        }
     }
 
     var body: some View {
@@ -43,7 +57,22 @@ struct ProfileView: View {
                         }
                         .buttonStyle(.plain)
                         Divider().padding(.leading, 48)
-                        settingsRow(icon: "location.fill", label: "Localisation", trailing: "Automatique")
+                        Button {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            settingsRow(
+                                icon: "location.fill",
+                                label: "Localisation",
+                                trailing: locationStatusLabel,
+                                showChevron: true
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+                            locationAuthStatus = CLLocationManager().authorizationStatus
+                        }
                         Divider().padding(.leading, 48)
                         settingsRow(icon: "globe", label: "Langue", trailing: "Français")
                     }
@@ -177,12 +206,14 @@ struct ProfileView: View {
             }
         }
         .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Version
 
     private var versionInfo: some View {
-        Text("Version 1.0.0")
+        Text("Version \(appVersion)")
             .font(.caption)
             .foregroundStyle(.tertiary)
             .frame(maxWidth: .infinity)
@@ -272,7 +303,7 @@ struct ProfileView: View {
     }
 
     private func aboutLink(icon: String, title: String, subtitle: String) -> some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
                 .font(.body.weight(.medium))
                 .foregroundStyle(.brand)
@@ -281,11 +312,15 @@ struct ProfileView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.subheadline.weight(.medium))
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 12)
     }
 
@@ -364,43 +399,7 @@ struct ProfileView: View {
     // MARK: - Privacy Policy
 
     private var privacySheet: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    legalBlock(title: "1. Données collectées") {
-                        "Mon Plein Éco ne collecte aucune donnée personnelle. Aucun compte utilisateur n'est requis. L'application n'utilise aucun outil de suivi analytique ou publicitaire."
-                    }
-                    legalBlock(title: "2. Localisation") {
-                        "L'application peut demander l'accès à votre position géographique pour afficher les stations à proximité. Cette donnée est traitée uniquement sur votre appareil et n'est jamais transmise à un serveur tiers."
-                    }
-                    legalBlock(title: "3. Stockage local") {
-                        "Vos préférences (carburant par défaut, stations favorites, historique de recherche) sont stockées localement sur votre appareil via les mécanismes natifs d'iOS. Elles ne sont ni transmises ni sauvegardées en ligne."
-                    }
-                    legalBlock(title: "4. Communications réseau") {
-                        "L'application communique uniquement avec l'API publique du Ministère de l'Économie pour récupérer les prix des carburants et avec les services Apple Maps pour le géocodage et le calcul d'itinéraires. Aucune donnée personnelle n'est transmise lors de ces requêtes."
-                    }
-                    legalBlock(title: "5. Cookies et traceurs") {
-                        "L'application n'utilise aucun cookie, traceur ou identifiant publicitaire."
-                    }
-                    legalBlock(title: "6. Droits de l'utilisateur") {
-                        "Conformément au RGPD, vous disposez d'un droit d'accès, de rectification et de suppression de vos données. Étant donné qu'aucune donnée personnelle n'est collectée, ces droits s'exercent directement sur votre appareil (suppression de l'application et de ses données)."
-                    }
-                    legalBlock(title: "7. Contact") {
-                        "Pour toute question relative à cette politique de confidentialité, vous pouvez nous contacter par e-mail à l'adresse indiquée sur la fiche App Store."
-                    }
-                }
-                .padding(.horizontal, Theme.Spacing.screenHorizontal)
-                .padding(.vertical, 20)
-            }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Politique de confidentialité")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Fermer") { showPrivacy = false }
-                }
-            }
-        }
+        PrivacyPolicySheet(isPresented: $showPrivacy)
     }
 
     private func legalBlock(title: String, content: () -> String) -> some View {
@@ -530,5 +529,79 @@ private struct TankPickerSheet: View {
             }
         }
         .presentationDetents([.medium])
+    }
+}
+
+// MARK: - Privacy Policy Sheet (WebView)
+
+private struct PrivacyPolicySheet: View {
+    @Binding var isPresented: Bool
+    @State private var isLoading = true
+
+    private let url = URL(string: "https://monpleineco.fr/privacy-policy")!
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                WebView(url: url, isLoading: $isLoading)
+
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(.brand)
+                }
+            }
+            .background(Color(.systemBackground))
+            .navigationTitle("Politique de confidentialité")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Fermer") { isPresented = false }
+                }
+            }
+        }
+    }
+}
+
+private struct WebView: UIViewRepresentable {
+    let url: URL
+    @Binding var isLoading: Bool
+
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = WKWebView()
+        webView.navigationDelegate = context.coordinator
+        webView.allowsBackForwardNavigationGestures = true
+        webView.load(URLRequest(url: url))
+        return webView
+    }
+
+    func updateUIView(_ uiView: WKWebView, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(isLoading: $isLoading)
+    }
+
+    final class Coordinator: NSObject, WKNavigationDelegate {
+        @Binding var isLoading: Bool
+
+        init(isLoading: Binding<Bool>) {
+            self._isLoading = isLoading
+        }
+
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            isLoading = true
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            isLoading = false
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            isLoading = false
+        }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            isLoading = false
+        }
     }
 }

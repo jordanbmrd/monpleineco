@@ -100,14 +100,18 @@ struct ClusterAnnotationView: View {
     var body: some View {
         Text("\(count)+")
             .font(.system(.caption, design: .rounded, weight: .heavy))
-            .foregroundStyle(.white)
+            .foregroundStyle(.primary)
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
             .background(
                 Circle()
-                    .fill(Color.brand.opacity(0.85))
+                    .fill(Color.elevatedCard)
             )
-            .shadow(color: Color.brand.opacity(0.3), radius: 6, y: 3)
+            .overlay(
+                Circle()
+                    .stroke(Color.cardBorder, lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
     }
 }
 

@@ -13,6 +13,8 @@ enum SortOption: String, CaseIterable {
 
 @Observable
 final class SearchViewModel {
+    static let myLocationLabel = "Ma position"
+
     // MARK: - Search inputs
     var searchMode: SearchMode = .around
     var fromQuery = ""
@@ -50,9 +52,18 @@ final class SearchViewModel {
 
     private var fuelObserver: NSObjectProtocol?
 
+    var isLocationAuthorized: Bool {
+        locationManager.authorizationStatus == .authorizedWhenInUse
+            || locationManager.authorizationStatus == .authorizedAlways
+    }
+
     init() {
         recentSearches = SearchHistoryManager.load()
         syncFuelFromDefaults()
+        if locationManager.authorizationStatus == .authorizedWhenInUse
+            || locationManager.authorizationStatus == .authorizedAlways {
+            fromQuery = Self.myLocationLabel
+        }
 
         fuelObserver = NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification,
@@ -173,6 +184,10 @@ final class SearchViewModel {
         searchMode = mode
         error = nil
         selectedStation = nil
+
+        if mode == .route && fromQuery.trimmingCharacters(in: .whitespaces).isEmpty && isLocationAuthorized {
+            fromQuery = Self.myLocationLabel
+        }
 
         if mode != lastSearchMode {
             stations = []
@@ -324,6 +339,17 @@ final class SearchViewModel {
         }
     }
 
+    @MainActor
+    func geolocateFromQuery() async {
+        do {
+            let coord = try await locationManager.locateOnce()
+            userCoordinate = coord
+            fromQuery = Self.myLocationLabel
+        } catch {
+            self.error = "Impossible de déterminer votre position."
+        }
+    }
+
     // MARK: - Private
 
     @MainActor
@@ -331,9 +357,20 @@ final class SearchViewModel {
         let fromTrimmed = fromQuery.trimmingCharacters(in: .whitespaces)
         let toTrimmed = toQuery.trimmingCharacters(in: .whitespaces)
 
-        async let startGeocode = geocode(fromTrimmed)
-        async let endGeocode = geocode(toTrimmed)
-        let (startCoord, endCoord) = try await (startGeocode, endGeocode)
+        let startCoord: Coordinate
+        if fromTrimmed == Self.myLocationLabel {
+            let coord: CLLocationCoordinate2D
+            if let existing = userCoordinate {
+                coord = existing
+            } else {
+                coord = try await locationManager.locateOnce()
+                userCoordinate = coord
+            }
+            startCoord = Coordinate(lat: coord.latitude, lon: coord.longitude)
+        } else {
+            startCoord = try await geocode(fromTrimmed)
+        }
+        let endCoord = try await geocode(toTrimmed)
 
         startPoint = startCoord
         endPoint = endCoord

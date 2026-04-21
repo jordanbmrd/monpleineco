@@ -23,12 +23,6 @@ struct HomeMapView: View {
                 mapLayer.ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    if let route = vm.routeResult, vm.searchMode == .route {
-                        routeInfoBar(route)
-                            .padding(.horizontal, Theme.Spacing.screenHorizontal)
-                            .padding(.top, 0)
-                    }
-
                     Spacer()
 
                     if vm.isLoading && vm.filteredStations.isEmpty && !vm.isHomeSearchExpanded {
@@ -348,43 +342,6 @@ struct HomeMapView: View {
         }
         .buttonStyle(.plain)
         .sensoryFeedback(.impact(weight: .light), trigger: vm.isLoading)
-    }
-
-    // MARK: - Route Info
-
-    private func routeInfoBar(_ route: RouteResult) -> some View {
-        HStack(alignment: .center, spacing: 10) {
-            Image(systemName: "car.fill")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.brand)
-
-            Text("\(vm.fromQuery) → \(vm.toQuery)")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .truncationMode(.middle)
-
-            Spacer(minLength: 6)
-
-            Text(FormattingUtils.formatDistance(route.distance))
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.secondary)
-
-            Text("·")
-                .font(.caption2)
-                .foregroundStyle(.quaternary)
-
-            Text(FormattingUtils.formatDuration(route.duration))
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.brand)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
     }
 
     // MARK: - Map Fitting

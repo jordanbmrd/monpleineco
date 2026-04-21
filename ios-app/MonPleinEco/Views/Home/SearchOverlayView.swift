@@ -1,11 +1,13 @@
 import SwiftUI
 import MapKit
+import UIKit
 
 struct SearchOverlayView: View {
     @Bindable var vm: SearchViewModel
     @Binding var isExpanded: Bool
 
     @State private var completer = AddressCompleter()
+    @State private var showLocationPermissionAlert = false
     @FocusState private var fieldFocused: Bool
 
     private var isRouteCollapsed: Bool {
@@ -58,6 +60,14 @@ struct SearchOverlayView: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: isExpanded)
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: vm.searchMode)
         .animation(.spring(response: 0.25, dampingFraction: 0.85), value: completer.suggestions.isEmpty)
+        .alert("Localisation désactivée", isPresented: $showLocationPermissionAlert) {
+            Button("Annuler", role: .cancel) {}
+            Button("Ouvrir Réglages") {
+                openAppSettings()
+            }
+        } message: {
+            Text("La localisation doit être activée pour utiliser cette action.")
+        }
     }
 
     // MARK: - Mode Picker
@@ -147,25 +157,11 @@ struct SearchOverlayView: View {
                         .frame(width: 22, height: 22)
                 }
 
-                Button {
+                locationButton {
                     Task {
                         await vm.geolocate()
                         triggerAroundSearch()
                     }
-                } label: {
-                    ZStack {
-                        if vm.locationManager.isLocating {
-                            ProgressView()
-                                .scaleEffect(0.7)
-                        } else {
-                            Image(systemName: "location.fill")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.brand)
-                        }
-                    }
-                    .frame(width: 36, height: 36)
-                    .background(Color.brand.opacity(0.1))
-                    .clipShape(Circle())
                 }
 
                 Button {
@@ -191,25 +187,11 @@ struct SearchOverlayView: View {
                         .scaleEffect(0.68)
                         .frame(width: 22, height: 22)
                 }
-                Button {
+                locationButton {
                     Task {
                         await vm.geolocate()
                         triggerAroundSearch()
                     }
-                } label: {
-                    ZStack {
-                        if vm.locationManager.isLocating {
-                            ProgressView()
-                                .scaleEffect(0.7)
-                        } else {
-                            Image(systemName: "location.fill")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.brand)
-                        }
-                    }
-                    .frame(width: 36, height: 36)
-                    .background(Color.brand.opacity(0.1))
-                    .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
             }
@@ -241,7 +223,19 @@ struct SearchOverlayView: View {
                 }
 
                 VStack(spacing: 4) {
-                    AddressSearchField(placeholder: "Départ", text: $vm.fromQuery)
+                    AddressSearchField(
+                        placeholder: "Départ",
+                        text: $vm.fromQuery,
+                        trailingAction: {
+                            if vm.isLocationAuthorized {
+                                Task { await vm.geolocateFromQuery() }
+                            } else {
+                                showLocationPermissionAlert = true
+                            }
+                        },
+                        trailingIcon: "location.fill",
+                        trailingLoading: vm.locationManager.isLocating
+                    )
                     AddressSearchField(placeholder: "Arrivée", text: $vm.toQuery)
                 }
 
@@ -280,24 +274,46 @@ struct SearchOverlayView: View {
         Button {
             withAnimation { isExpanded = true }
         } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "road.lanes")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.brand)
+            VStack(spacing: 4) {
+                HStack(spacing: 10) {
+                    Image(systemName: "road.lanes")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.brand)
+                        .frame(width: 16, alignment: .center)
 
-                Text("\(vm.fromQuery) → \(vm.toQuery)")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Text("\(vm.fromQuery) → \(vm.toQuery)")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                Image(systemName: "pencil")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.brand)
-                    .frame(width: 30, height: 30)
-                    .background(Color.brand.opacity(0.1))
-                    .clipShape(Circle())
+                    Image(systemName: "pencil")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.brand)
+                        .frame(width: 30, height: 30)
+                        .background(Color.brand.opacity(0.1))
+                        .clipShape(Circle())
+                }
+
+                if let route = vm.routeResult {
+                    HStack(spacing: 6) {
+                        Text(FormattingUtils.formatDistance(route.distance))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        Text("·")
+                            .font(.caption2)
+                            .foregroundStyle(.quaternary)
+
+                        Text(FormattingUtils.formatDuration(route.duration))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        Spacer()
+                    }
+                    .padding(.leading, 26)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -310,8 +326,6 @@ struct SearchOverlayView: View {
 
     private var bottomExpandedContent: some View {
         VStack(spacing: 8) {
-            fuelChips
-
             Button {
                 if vm.searchMode == .route {
                     triggerRouteSearch()
@@ -343,33 +357,6 @@ struct SearchOverlayView: View {
             .padding(.bottom, 12)
         }
         .padding(.top, 8)
-    }
-
-    // MARK: - Fuel Chips
-
-    private var fuelChips: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Carburant")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.5)
-                .padding(.horizontal, 16)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(FuelType.displayOrder) { fuel in
-                        FuelChipView(
-                            fuel: fuel,
-                            isSelected: vm.selectedFuel == fuel
-                        ) {
-                            vm.selectedFuel = fuel
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-            }
-        }
     }
 
     // MARK: - Suggestions
@@ -412,6 +399,38 @@ struct SearchOverlayView: View {
                     Divider().padding(.leading, 46)
                 }
             }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func openAppSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
+    }
+
+    @ViewBuilder
+    private func locationButton(authorizedAction: @escaping () -> Void) -> some View {
+        Button {
+            if vm.isLocationAuthorized {
+                authorizedAction()
+            } else {
+                showLocationPermissionAlert = true
+            }
+        } label: {
+            ZStack {
+                if vm.locationManager.isLocating {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                } else {
+                    Image(systemName: "location.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(vm.isLocationAuthorized ? .brand : .secondary)
+                }
+            }
+            .frame(width: 36, height: 36)
+            .background(Color.brand.opacity(vm.isLocationAuthorized ? 0.1 : 0.05))
+            .clipShape(Circle())
         }
     }
 

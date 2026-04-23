@@ -39,6 +39,9 @@ struct StationWithMetrics: Identifiable, Hashable {
     let bestPrice: Double
     let bestFuelLabel: String
     let distanceToRoute: Double
+    /// Estimated extra time (in seconds) to detour off the current route to reach this station.
+    /// `nil` when not in route mode.
+    let detourDuration: TimeInterval?
     var rank: Int
 
     var id: Int { station.id }

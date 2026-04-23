@@ -138,6 +138,19 @@ enum FormattingUtils {
         return "\(Int(meters.rounded())) m"
     }
 
+    static func formatDetour(_ seconds: TimeInterval) -> String {
+        let minutes = Int(ceil(seconds / 60))
+        if minutes < 1 {
+            return "+<1 min"
+        }
+        if minutes < 60 {
+            return "+\(minutes) min"
+        }
+        let h = minutes / 60
+        let m = minutes % 60
+        return m == 0 ? "+\(h) h" : "+\(h) h \(m) min"
+    }
+
     static func formatDuration(_ seconds: TimeInterval) -> String {
         let hours = Int(seconds) / 3600
         let minutes = (Int(seconds) % 3600) / 60

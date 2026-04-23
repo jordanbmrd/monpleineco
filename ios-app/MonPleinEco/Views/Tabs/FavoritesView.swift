@@ -29,6 +29,7 @@ struct FavoritesView: View {
                     bestPrice: entry?.price ?? 0,
                     bestFuelLabel: entry?.shortName ?? preferredFuel.shortName,
                     distanceToRoute: 0,
+                    detourDuration: nil,
                     rank: 0
                 )
                 StationDetailView(station: metrics)

@@ -56,6 +56,20 @@ struct StationCarouselCard: View {
                                     }
                                     .foregroundStyle(.secondary)
                                 }
+
+                                if let detour = station.detourDuration {
+                                    Circle()
+                                        .fill(Color(.quaternaryLabel))
+                                        .frame(width: 3, height: 3)
+                                    HStack(spacing: 2) {
+                                        Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
+                                            .font(.system(size: 8, weight: .bold))
+                                        Text(FormattingUtils.formatDetour(detour))
+                                            .font(.caption2.weight(.semibold))
+                                            .monospacedDigit()
+                                    }
+                                    .foregroundStyle(.secondary)
+                                }
                             }
                         }
 

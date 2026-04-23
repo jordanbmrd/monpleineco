@@ -13,7 +13,7 @@
 	<key>CFBundleVersion</key>
 	<string>2</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.1.0</string>
+	<string>1.2</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>LSRequiresIPhoneOS</key>
@@ -35,6 +35,17 @@
 	<string>Mon Plein Éco utilise votre position pour trouver les stations essence les moins chères autour de vous.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>fr.monpleineco.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>monpleineco</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>comgooglemaps</string>

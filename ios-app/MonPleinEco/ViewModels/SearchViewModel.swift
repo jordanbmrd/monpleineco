@@ -396,8 +396,15 @@ final class SearchViewModel {
         AppLog.search.debug("searchRoute API rawStations=\(rawStations.count) samplePoints=\(sampledPoints.count)")
 
         let fuelIds = [selectedFuel.rawValue]
+        let avgSpeed = route.duration > 0 ? route.distance / route.duration : 0
         let mapped: [StationWithMetrics] = rawStations.compactMap { station in
-            enrichStation(station, fuelIds: fuelIds, polyline: route.coordinates, maxDistance: 5000)
+            enrichStation(
+                station,
+                fuelIds: fuelIds,
+                polyline: route.coordinates,
+                maxDistance: 5000,
+                routeAverageSpeed: avgSpeed
+            )
         }
         if rawStations.isEmpty {
             AppLog.search.warning("searchRoute: 0 stations renvoyées par l’API sur le trajet")
@@ -479,7 +486,8 @@ final class SearchViewModel {
         fuelIds: [Int],
         polyline: [Coordinate]? = nil,
         referencePoint: Coordinate? = nil,
-        maxDistance: Double = .infinity
+        maxDistance: Double = .infinity,
+        routeAverageSpeed: Double = 0
     ) -> StationWithMetrics? {
         let candidates = station.fuels.filter { fuel in
             fuelIds.contains(fuel.id) && fuel.available && fuel.price != nil
@@ -489,9 +497,15 @@ final class SearchViewModel {
             return nil
         }
         let dist: Double
+        var detour: TimeInterval? = nil
         if let polyline {
             dist = GeoUtils.distancePointToPolylineMeters(point: station.coordinates, polyline: polyline)
             guard dist <= maxDistance else { return nil }
+            if routeAverageSpeed > 0 {
+                // Approximation: detour = leaving the route and coming back (~2× perpendicular distance),
+                // driven at the route's average speed.
+                detour = (2.0 * dist) / routeAverageSpeed
+            }
         } else if let ref = referencePoint {
             dist = GeoUtils.haversineMeters(ref, station.coordinates)
         } else {
@@ -502,6 +516,7 @@ final class SearchViewModel {
             bestPrice: bestPrice,
             bestFuelLabel: best.shortName,
             distanceToRoute: dist,
+            detourDuration: detour,
             rank: 0
         )
     }

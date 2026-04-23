@@ -14,5 +14,6 @@ struct MonPleinEcoApp: App {
                     .transition(.opacity)
             }
         }
+        .handlesExternalEvents(matching: ["*"])
     }
 }

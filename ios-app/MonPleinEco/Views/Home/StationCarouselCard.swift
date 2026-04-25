@@ -132,8 +132,8 @@ struct StationCarouselCard: View {
                         lineWidth: 1
                     )
             )
-            .shadow(color: .black.opacity(0.12), radius: 20, y: 8)
-            .shadow(color: .black.opacity(0.04), radius: 4, y: 2)
+            .shadow(color: .black.opacity(0.08), radius: 8, y: 3)
+            .shadow(color: .black.opacity(0.03), radius: 1, y: 1)
         }
         .buttonStyle(CardPressStyle())
         .accessibilityElement(children: .combine)

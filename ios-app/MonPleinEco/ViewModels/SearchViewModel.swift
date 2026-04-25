@@ -156,7 +156,7 @@ final class SearchViewModel {
         let mapped: [StationWithMetrics] = rawStations.compactMap { station in
             enrichStation(station, fuelIds: fuelIds, referencePoint: point)
         }
-        let sorted = mapped.sorted { $0.bestPrice < $1.bestPrice }
+        let sorted = mapped.sorted(by: priceSort)
         let enriched = rankStations(sorted)
 
         stations = enriched
@@ -175,7 +175,7 @@ final class SearchViewModel {
         }
         filtered.sort { a, b in
             switch sortBy {
-            case .price: a.bestPrice < b.bestPrice
+            case .price: priceSort(a, b)
             case .distance: a.distanceToRoute < b.distanceToRoute
             }
         }
@@ -347,7 +347,7 @@ final class SearchViewModel {
         let mapped: [StationWithMetrics] = rawStations.compactMap { station in
             enrichStation(station, fuelIds: fuelIds, referencePoint: point)
         }
-        let sorted = mapped.sorted { $0.bestPrice < $1.bestPrice }
+        let sorted = mapped.sorted(by: priceSort)
         let enriched = rankStations(sorted)
 
         stations = enriched
@@ -481,7 +481,7 @@ final class SearchViewModel {
         } else if mapped.isEmpty {
             logSampleStationFuels(rawStations.first, label: "searchRoute enrich a tout filtré")
         }
-        let sorted = mapped.sorted { $0.bestPrice < $1.bestPrice }
+        let sorted = mapped.sorted(by: priceSort)
         let enriched = rankStations(sorted)
 
         stations = enriched
@@ -514,7 +514,7 @@ final class SearchViewModel {
         } else if mapped.isEmpty {
             logSampleStationFuels(rawStations.first, label: "searchAround enrich a tout filtré (prix/carburant ?)")
         }
-        let sorted = mapped.sorted { $0.bestPrice < $1.bestPrice }
+        let sorted = mapped.sorted(by: priceSort)
         let enriched = rankStations(sorted)
 
         stations = enriched
@@ -589,6 +589,18 @@ final class SearchViewModel {
             detourDuration: detour,
             rank: 0
         )
+    }
+
+    /// Tie-break price equality with distance (around mode) or detour duration (route mode)
+    /// so the top ranks reflect the closest / least-detour station among equal-priced ones.
+    private func priceSort(_ a: StationWithMetrics, _ b: StationWithMetrics) -> Bool {
+        if a.bestPrice != b.bestPrice { return a.bestPrice < b.bestPrice }
+        switch searchMode {
+        case .route:
+            return (a.detourDuration ?? .infinity) < (b.detourDuration ?? .infinity)
+        case .around:
+            return a.distanceToRoute < b.distanceToRoute
+        }
     }
 
     private func rankStations(_ sorted: [StationWithMetrics]) -> [StationWithMetrics] {

@@ -10,6 +10,25 @@ struct FavoritesView: View {
         FuelType(rawValue: defaultFuelRawValue) ?? .sp95E10
     }
 
+    private var cheapestFavoriteId: Int? {
+        sortedFavorites.first { station in
+            guard let entry = station.fuels.first(where: { $0.id == preferredFuel.rawValue }),
+                  entry.available, entry.price != nil else { return false }
+            return true
+        }?.id
+    }
+
+    private var sortedFavorites: [Station] {
+        favoritesManager.favorites.sorted { lhs, rhs in
+            let lhsEntry = lhs.fuels.first { $0.id == preferredFuel.rawValue }
+            let rhsEntry = rhs.fuels.first { $0.id == preferredFuel.rawValue }
+            let lhsPrice = (lhsEntry?.available == true ? lhsEntry?.price : nil) ?? .infinity
+            let rhsPrice = (rhsEntry?.available == true ? rhsEntry?.price : nil) ?? .infinity
+            if lhsPrice != rhsPrice { return lhsPrice < rhsPrice }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
             Group {
@@ -20,7 +39,7 @@ struct FavoritesView: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Favoris")
+            .navigationTitle("Favoris · \(preferredFuel.label)")
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(for: Station.self) { station in
                 let entry = station.fuels.first { $0.id == preferredFuel.rawValue }
@@ -87,21 +106,24 @@ struct FavoritesView: View {
             }
 
             LazyVStack(spacing: 12) {
-                ForEach(favoritesManager.favorites) { station in
+                let cheapestId = cheapestFavoriteId
+                ForEach(sortedFavorites) { station in
                     Button {
                         path.append(station)
                     } label: {
                         FavoriteStationCard(
                             station: station,
                             preferredFuel: preferredFuel,
-                            tankSize: tankSize
+                            tankSize: tankSize,
+                            isCheapest: station.id == cheapestId
                         )
                     }
                     .buttonStyle(CardPressStyle())
                 }
             }
             .padding(.horizontal, Theme.Spacing.screenHorizontal)
-            .padding(.vertical, 8)
+            .padding(.top, 14)
+            .padding(.bottom, 8)
         }
     }
 }
@@ -112,6 +134,7 @@ private struct FavoriteStationCard: View {
     let station: Station
     let preferredFuel: FuelType
     let tankSize: Int
+    var isCheapest: Bool = false
 
     private var fuelEntry: StationFuel? {
         station.fuels.first { $0.id == preferredFuel.rawValue }
@@ -129,14 +152,22 @@ private struct FavoriteStationCard: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 14) {
-                // Fuel icon
+                // Brand logo (fallback to fuel icon when no logo is available)
                 ZStack {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(isUnavailable ? Color(.tertiarySystemFill) : dropColor.opacity(0.12))
+                        .fill(Color(.secondarySystemBackground))
                         .frame(width: 48, height: 48)
-                    Image(systemName: "fuelpump.fill")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(isUnavailable ? Color(.tertiaryLabel) : dropColor)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .strokeBorder(Color.cardBorder, lineWidth: 1)
+                        )
+                    if BrandLogo.assetName(for: station.brand) != nil {
+                        BrandBadgeView(brand: station.brand, size: 36)
+                    } else {
+                        Image(systemName: "fuelpump.fill")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(isUnavailable ? Color(.tertiaryLabel) : dropColor)
+                    }
                 }
 
                 // Station info
@@ -203,34 +234,33 @@ private struct FavoriteStationCard: View {
                     .padding(.leading, 2)
             }
             .padding(16)
-
-            // Fuel type indicator bar
-            if !isUnavailable {
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(dropColor)
-                        .frame(width: 6, height: 6)
-                    Text(preferredFuel.label)
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                        .tracking(0.5)
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
-                .padding(.top, -2)
-            }
         }
         .background(Color.elevatedCard)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .strokeBorder(
-                    isUnavailable ? Color.cardBorder : dropColor.opacity(0.2),
-                    lineWidth: 1
+                    isCheapest ? Color.green.opacity(0.6)
+                        : (isUnavailable ? Color.cardBorder : dropColor.opacity(0.2)),
+                    lineWidth: isCheapest ? 1.5 : 1
                 )
         )
+        .overlay(alignment: .topTrailing) {
+            if isCheapest {
+                Text("Le moins cher")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .textCase(.uppercase)
+                    .tracking(0.4)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule().fill(Color.green)
+                    )
+                    .shadow(color: Color.green.opacity(0.35), radius: 6, y: 2)
+                    .offset(x: -10, y: -10)
+            }
+        }
         .shadow(color: .black.opacity(0.06), radius: 12, y: 5)
         .shadow(color: .black.opacity(0.02), radius: 3, y: 1)
     }

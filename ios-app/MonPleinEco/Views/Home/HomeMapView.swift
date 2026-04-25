@@ -245,7 +245,9 @@ struct HomeMapView: View {
 
     private var bottomCarousel: some View {
         GeometryReader { geo in
-            let cardWidth = geo.size.width - Theme.Spacing.screenHorizontal * 2
+            let peek: CGFloat = 22
+            let sideInset = Theme.Spacing.screenHorizontal + peek
+            let cardWidth = max(0, geo.size.width - sideInset * 2)
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 12) {
                     ForEach(Array(vm.filteredStations.enumerated()), id: \.element.id) { index, station in
@@ -257,8 +259,8 @@ struct HomeMapView: View {
                     }
                 }
                 .scrollTargetLayout()
-                .padding(.horizontal, Theme.Spacing.screenHorizontal)
             }
+            .contentMargins(.horizontal, sideInset, for: .scrollContent)
             .scrollTargetBehavior(.viewAligned)
             .scrollPosition(id: Binding(
                 get: { visibleStationIndex },

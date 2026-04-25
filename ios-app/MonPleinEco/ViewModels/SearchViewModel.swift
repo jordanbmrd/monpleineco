@@ -82,8 +82,30 @@ final class SearchViewModel {
 
     private func syncFuelFromDefaults() {
         let savedRaw = UserDefaults.standard.integer(forKey: "defaultFuelRawValue")
-        if savedRaw != 0, let fuel = FuelType(rawValue: savedRaw), fuel != selectedFuel {
-            selectedFuel = fuel
+        guard savedRaw != 0, let fuel = FuelType(rawValue: savedRaw), fuel != selectedFuel else { return }
+        selectedFuel = fuel
+        // Cached results were computed with the previous fuel — drop them.
+        snapshots.removeAll()
+        Task { @MainActor in
+            await refreshAfterFuelChange()
+        }
+    }
+
+    @MainActor
+    private func refreshAfterFuelChange() async {
+        guard viewState == .results else { return }
+        switch searchMode {
+        case .around:
+            if let point = startPoint {
+                let coord = CLLocationCoordinate2D(latitude: point.lat, longitude: point.lon)
+                await searchAroundCoordinate(coord)
+            } else if isReadyToSearch {
+                await search()
+            }
+        case .route:
+            if isReadyToSearch {
+                await search()
+            }
         }
     }
 
@@ -176,25 +198,75 @@ final class SearchViewModel {
 
     // MARK: - Mode switching
 
-    /// Tracks which mode produced the current results so we can clear on switch
-    private var lastSearchMode: SearchMode?
+    private struct ResultsSnapshot {
+        var stations: [StationWithMetrics]
+        var routeResult: RouteResult?
+        var startPoint: Coordinate?
+        var endPoint: Coordinate?
+        var viewState: ViewState
+        var addressQuery: String
+        var fromQuery: String
+        var toQuery: String
+        var availableBrands: [String]
+        var selectedBrand: String
+        var sortBy: SortOption
+        var avoidTolls: Bool
+    }
+
+    private var snapshots: [SearchMode: ResultsSnapshot] = [:]
+
+    private func captureSnapshot() -> ResultsSnapshot {
+        ResultsSnapshot(
+            stations: stations,
+            routeResult: routeResult,
+            startPoint: startPoint,
+            endPoint: endPoint,
+            viewState: viewState,
+            addressQuery: addressQuery,
+            fromQuery: fromQuery,
+            toQuery: toQuery,
+            availableBrands: availableBrands,
+            selectedBrand: selectedBrand,
+            sortBy: sortBy,
+            avoidTolls: avoidTolls
+        )
+    }
+
+    private func restore(_ snap: ResultsSnapshot) {
+        stations = snap.stations
+        routeResult = snap.routeResult
+        startPoint = snap.startPoint
+        endPoint = snap.endPoint
+        viewState = snap.viewState
+        addressQuery = snap.addressQuery
+        fromQuery = snap.fromQuery
+        toQuery = snap.toQuery
+        availableBrands = snap.availableBrands
+        selectedBrand = snap.selectedBrand
+        sortBy = snap.sortBy
+        avoidTolls = snap.avoidTolls
+    }
 
     func switchMode(to mode: SearchMode) {
         guard mode != searchMode else { return }
+        snapshots[searchMode] = captureSnapshot()
         searchMode = mode
         error = nil
         selectedStation = nil
 
-        if mode == .route && fromQuery.trimmingCharacters(in: .whitespaces).isEmpty && isLocationAuthorized {
-            fromQuery = Self.myLocationLabel
-        }
-
-        if mode != lastSearchMode {
+        if let snap = snapshots[mode] {
+            restore(snap)
+        } else {
             stations = []
             routeResult = nil
             startPoint = nil
             endPoint = nil
             viewState = .form
+            availableBrands = []
+            selectedBrand = ""
+            if mode == .route && fromQuery.trimmingCharacters(in: .whitespaces).isEmpty && isLocationAuthorized {
+                fromQuery = Self.myLocationLabel
+            }
         }
     }
 
@@ -226,7 +298,6 @@ final class SearchViewModel {
             } else {
                 try await searchAround()
             }
-            lastSearchMode = searchMode
             AppLog.search.debug("search done stations.count=\(self.stations.count) filtered=\(self.filteredStations.count)")
         } catch {
             AppLog.search.error("search failed: \(error.localizedDescription, privacy: .public)")
@@ -281,7 +352,6 @@ final class SearchViewModel {
 
         stations = enriched
         updateBrands(from: enriched)
-        lastSearchMode = .around
         if let label { saveSearch(label: label, address: label) }
 
         isLoading = false

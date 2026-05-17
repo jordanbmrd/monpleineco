@@ -1,6 +1,6 @@
 # Politique de confidentialité — Mon Plein Éco (iOS)
 
-Dernière mise à jour : 2026-04-13
+Dernière mise à jour : 2026-05-17
 
 Mon Plein Éco (“l’Application”) permet de consulter les stations-service et les prix des carburants autour de vous ou le long d’un itinéraire.
 
@@ -43,15 +43,19 @@ Ces données ne sont pas synchronisées sur un serveur (sauf mention contraire d
 
 **Base légale (RGPD) :** exécution du service / intérêt légitime (améliorer l’expérience en mémorisant vos choix), selon le cas.
 
+### 1.5 Publicité (Google AdMob)
+Cette application affiche des publicités non personnalisées via Google AdMob. Aucune donnée personnelle n'est utilisée à des fins de ciblage publicitaire.
+
 ## 2) Ce que nous ne faisons pas
 - Pas de création de compte utilisateur.
 - Pas de vente de données personnelles.
 - Pas de publicité ciblée.
-- Pas d’outil de suivi analytique ou publicitaire (type SDK d’analytics), à la date de dernière mise à jour.
+- Pas d’outil de suivi analytique (type SDK d’analytics), à la date de dernière mise à jour.
 
 ## 3) Destinataires des données
 - **Apple Maps / MapKit (Apple) :** pour suggestions, géocodage et itinéraires.
 - **API “prix carburants”** : pour récupérer les stations et prix.
+- **Google AdMob (Google)** : pour l’affichage de publicités non personnalisées.
 
 ## 4) Durées de conservation
 - **Localisation :** utilisée en temps réel pour la recherche ; aucun historique de localisation n’est conservé par l’Application côté serveur.

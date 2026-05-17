@@ -56,7 +56,104 @@ actor StationService {
             throw StationError.fetchFailed(errors.prefix(3).joined(separator: "; "))
         }
 
-        return Array(stationsById.values)
+        let raw = Array(stationsById.values)
+        return await enrichWithOsm(raw)
+    }
+
+    // MARK: - OSM enrichment
+    //
+    // The official government dataset does not carry brand/name fields.
+    // We complement it with OpenStreetMap (`amenity=fuel` features carry
+    // `brand`, `name`, `operator` tags) via the Overpass API. Each station
+    // is matched to the closest OSM fuel feature within a tolerance, since
+    // the government coordinates are rounded.
+
+    private static let overpassURL = URL(string: "https://overpass-api.de/api/interpreter")!
+    private static let osmMatchRadiusM: Double = 250
+    private static let osmBboxPaddingDeg = 0.005
+
+    private func enrichWithOsm(_ stations: [Station]) async -> [Station] {
+        guard !stations.isEmpty else { return stations }
+
+        let lats = stations.map { $0.coordinates.lat }
+        let lons = stations.map { $0.coordinates.lon }
+        guard let minLat = lats.min(), let maxLat = lats.max(),
+              let minLon = lons.min(), let maxLon = lons.max() else {
+            return stations
+        }
+
+        let south = minLat - Self.osmBboxPaddingDeg
+        let north = maxLat + Self.osmBboxPaddingDeg
+        let west = minLon - Self.osmBboxPaddingDeg
+        let east = maxLon + Self.osmBboxPaddingDeg
+        let bbox = "\(south),\(west),\(north),\(east)"
+        let query =
+            "[out:json][timeout:25];" +
+            "(node[\"amenity\"=\"fuel\"](\(bbox));way[\"amenity\"=\"fuel\"](\(bbox)););" +
+            "out center tags;"
+
+        var request = URLRequest(url: Self.overpassURL)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("MonPleinEco/1.0 (iOS)", forHTTPHeaderField: "User-Agent")
+        let body = "data=" + (query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query)
+        request.httpBody = body.data(using: .utf8)
+
+        let elements: [OverpassElement]
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+                AppLog.stations.warning("OSM enrichment HTTP \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                return stations
+            }
+            let decoded = try JSONDecoder().decode(OverpassResponse.self, from: data)
+            elements = decoded.elements ?? []
+        } catch {
+            AppLog.stations.warning("OSM enrichment failed: \(error.localizedDescription, privacy: .public)")
+            return stations
+        }
+
+        struct OsmPoint { let coord: Coordinate; let tags: [String: String] }
+        let osm: [OsmPoint] = elements.compactMap { el in
+            let lat = el.lat ?? el.center?.lat
+            let lon = el.lon ?? el.center?.lon
+            guard let lat, let lon else { return nil }
+            return OsmPoint(coord: Coordinate(lat: lat, lon: lon), tags: el.tags ?? [:])
+        }
+        guard !osm.isEmpty else { return stations }
+
+        return stations.map { station -> Station in
+            var bestDist = Double.infinity
+            var bestTags: [String: String]? = nil
+            for point in osm {
+                let d = GeoUtils.haversineMeters(station.coordinates, point.coord)
+                if d < bestDist {
+                    bestDist = d
+                    bestTags = point.tags
+                }
+            }
+            guard let tags = bestTags, bestDist <= Self.osmMatchRadiusM else {
+                return station
+            }
+            let brand = tags["brand"] ?? tags["brand:fr"] ?? tags["operator"] ?? station.brand
+            let osmName = tags["name"] ?? tags["name:fr"]
+            let newName: String = {
+                if let osmName, !osmName.isEmpty { return osmName }
+                if (station.name == "Station" || station.name.isEmpty), let brand { return brand }
+                return station.name
+            }()
+            return Station(
+                id: station.id,
+                name: newName,
+                brand: brand,
+                address: station.address,
+                city: station.city,
+                coordinates: station.coordinates,
+                fuels: station.fuels,
+                services: station.services
+            )
+        }
     }
 
     // MARK: - Cached fetch
@@ -80,63 +177,92 @@ actor StationService {
 
     // MARK: - Network
 
+    /// Official French government dataset (Ministère de l'Économie):
+    /// "Prix des carburants en France – Flux instantané – v2"
+    /// API: OpenDataSoft Explore v2.1 — https://data.economie.gouv.fr
+    private static let datasetURL =
+        "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records"
+
+    private static let pageLimit = 100
+    private static let maxRecordsPerPoint = 300
+
     private func fetchSingle(
         point: Coordinate,
         fuelIds: [Int],
         rangeMeters: Int
     ) async throws -> [Station] {
-        var components = URLComponents(
-            string: "https://api.prix-carburants.2aaz.fr/stations/around/\(point.lat),\(point.lon)"
-        )!
-
-        var queryItems: [URLQueryItem] = [
-            URLQueryItem(name: "responseFields", value: "Fuels,Price,Services")
+        var whereParts: [String] = [
+            "within_distance(geom, GEOM'POINT(\(point.lon) \(point.lat))', \(max(1, rangeMeters))m)"
         ]
+
         if !fuelIds.isEmpty {
-            queryItems.append(URLQueryItem(name: "fuels", value: fuelIds.map(String.init).joined(separator: ",")))
-        }
-        components.queryItems = queryItems
-
-        var request = URLRequest(url: components.url!)
-        request.setValue("m=0-\(rangeMeters)", forHTTPHeaderField: "Range")
-
-        guard let urlString = components.url?.absoluteString else {
-            AppLog.stations.error("fetchSingle URL invalide")
-            throw StationError.badResponse
-        }
-        AppLog.stations.debug("fetchSingle GET \(urlString, privacy: .public)")
-
-        let (data, response): (Data, URLResponse)
-        do {
-            (data, response) = try await URLSession.shared.data(for: request)
-        } catch {
-            AppLog.stations.error("fetchSingle network error: \(error.localizedDescription, privacy: .public)")
-            throw error
+            let priceFields = FuelMapping.all
+                .filter { fuelIds.contains($0.id) }
+                .map { "\($0.priceField) IS NOT NULL" }
+            if !priceFields.isEmpty {
+                whereParts.append("(" + priceFields.joined(separator: " OR ") + ")")
+            }
         }
 
-        let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-        AppLog.stations.debug("fetchSingle HTTP \(status) dataBytes=\(data.count)")
+        let whereClause = whereParts.joined(separator: " AND ")
 
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 || httpResponse.statusCode == 206 else {
-            let bodyPreview = String(data: data.prefix(200), encoding: .utf8) ?? ""
-            AppLog.stations.error("fetchSingle bad status \(status) bodyPrefix=\(bodyPreview, privacy: .public)")
-            throw StationError.badResponse
+        var stationsById: [Int: Station] = [:]
+        var offset = 0
+        while offset < Self.maxRecordsPerPoint {
+            var components = URLComponents(string: Self.datasetURL)!
+            components.queryItems = [
+                URLQueryItem(name: "where", value: whereClause),
+                URLQueryItem(name: "limit", value: String(Self.pageLimit)),
+                URLQueryItem(name: "offset", value: String(offset))
+            ]
+
+            guard let url = components.url else {
+                AppLog.stations.error("fetchSingle URL invalide")
+                throw StationError.badResponse
+            }
+
+            var request = URLRequest(url: url)
+            request.setValue("application/json", forHTTPHeaderField: "Accept")
+            AppLog.stations.debug("fetchSingle GET \(url.absoluteString, privacy: .public)")
+
+            let (data, response): (Data, URLResponse)
+            do {
+                (data, response) = try await URLSession.shared.data(for: request)
+            } catch {
+                AppLog.stations.error("fetchSingle network error: \(error.localizedDescription, privacy: .public)")
+                throw error
+            }
+
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            AppLog.stations.debug("fetchSingle HTTP \(status) dataBytes=\(data.count)")
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                let bodyPreview = String(data: data.prefix(200), encoding: .utf8) ?? ""
+                AppLog.stations.error("fetchSingle bad status \(status) bodyPrefix=\(bodyPreview, privacy: .public)")
+                throw StationError.badResponse
+            }
+
+            let envelope: OdsRecordsResponse
+            do {
+                envelope = try JSONDecoder().decode(OdsRecordsResponse.self, from: data)
+            } catch {
+                AppLog.stations.error("fetchSingle JSON decode failed: \(error.localizedDescription, privacy: .public)")
+                throw error
+            }
+
+            let records = envelope.results ?? []
+            for record in records {
+                if let station = record.toStation() {
+                    stationsById[station.id] = station
+                }
+            }
+
+            if records.count < Self.pageLimit { break }
+            offset += Self.pageLimit
         }
 
-        let apiStations: [ApiStation]
-        do {
-            apiStations = try JSONDecoder().decode([ApiStation].self, from: data)
-        } catch {
-            AppLog.stations.error("fetchSingle JSON decode failed: \(error.localizedDescription, privacy: .public)")
-            throw error
-        }
-
-        let mapped = apiStations.compactMap { $0.toStation() }
-        if mapped.count != apiStations.count {
-            AppLog.stations.warning("fetchSingle mapped=\(mapped.count) raw=\(apiStations.count) (certaines stations sans coordonnées)")
-        }
-        return mapped
+        return Array(stationsById.values)
     }
 
     enum StationError: LocalizedError {

@@ -27,9 +27,9 @@ Ces fonctionnalités impliquent l’envoi de requêtes aux services Apple Maps (
 
 ### 1.3 Données “stations” et “prix carburants”
 Pour afficher les stations et les prix, l’Application récupère des données via une **API de consultation** :
-- Requêtes vers : `https://api.prix-carburants.2aaz.fr/...`
+- Requêtes vers l’API officielle du gouvernement français : `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records`
 
-Les informations affichées proviennent de sources publiques liées aux prix des carburants (réseau “prix des carburants”). L’Application affiche des informations telles que : station, adresse/ville, carburants disponibles, prix, date de mise à jour.
+Les informations affichées proviennent du jeu de données ouvert « Prix des carburants en France – Flux instantané – v2 » publié par le Ministère de l’Économie sur `data.economie.gouv.fr` / `prix-carburants.gouv.fr`. L’Application affiche des informations telles que : station, adresse/ville, carburants disponibles, prix, date de mise à jour.
 
 **Base légale (RGPD) :** exécution du service (affichage des résultats).
 
